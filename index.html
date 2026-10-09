@@ -251,7 +251,7 @@ details.more[open] summary{margin-bottom:10px}
 @media (min-width:981px){
   body{padding-right:340px}
   .shell{grid-template-columns:minmax(0,1fr)}
-  .guide{position:fixed;top:0;right:0;bottom:0;width:340px;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;background:var(--bg);border-left:1px solid var(--line);z-index:25}
+  .guide{position:fixed;top:0;right:0;bottom:0;align-self:stretch;max-height:100dvh;width:340px;overflow-y:auto;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;background:var(--bg);border-left:1px solid var(--line);z-index:25}
   .scrim{right:340px}
   .guide > *{flex:none}
   .guide .steps{flex:0 1 auto;min-height:120px;overflow-y:auto;overscroll-behavior:contain}
@@ -608,7 +608,7 @@ function renderGuide() {
   html += `<div class="guide-foot"><button class="btn btn-sm" data-action="reset">Reset demo</button></div>`;
   $('#guide').innerHTML = html;
   const now = $('#guide .steps li.now') || $('#guide .finish');
-  if (now) { const box = $('#guide .steps'); box.scrollTop = Math.max(0, now.offsetTop - box.offsetTop - box.clientHeight / 2 + now.offsetHeight / 2); }
+  if (now) { const box = $('#guide .steps'); const y = now.offsetTop - box.offsetTop; if (y + now.offsetHeight > box.clientHeight - 8) box.scrollTop = y + now.offsetHeight - box.clientHeight + 24; }
 }
 function applyGuide() {
   document.querySelectorAll('.guide-target').forEach(e => e.classList.remove('guide-target'));
