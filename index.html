@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Payment Links Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: merchant back office (header, tabs, work area) + a guide rail that walks reviewers through each scenario */
+:root{
+  --bg:#F4F6F9; --surface:#FFFFFF; --sunken:#EEF1F5; --line:#DCE1E8; --ink:#17202E; --muted:#5D6878;
+  --accent:#1F5FAF; --accent-ink:#FFFFFF; --accent-soft:#E3ECF8;
+  --good:#1E7A4C; --good-soft:#DFF2E7; --warn:#9A6200; --warn-soft:#FBEFD6; --bad:#B42318; --bad-soft:#FBE3E0; --info-soft:#EAF0F7;
+  --shadow:0 8px 28px rgba(23,32,46,.14);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0F141C; --surface:#171E29; --sunken:#1D2531; --line:#2B3544; --ink:#E7ECF3; --muted:#9AA6B7;
+  --accent:#6FA3F0; --accent-ink:#0D1B2E; --accent-soft:#1C2E48;
+  --good:#5CCB92; --good-soft:#163526; --warn:#E8B54D; --warn-soft:#3A2E12; --bad:#F2877D; --bad-soft:#3D1D1A; --info-soft:#1B2533;
+  --shadow:0 8px 28px rgba(0,0,0,.5);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F141C; --surface:#171E29; --sunken:#1D2531; --line:#2B3544; --ink:#E7ECF3; --muted:#9AA6B7;
+  --accent:#6FA3F0; --accent-ink:#0D1B2E; --accent-soft:#1C2E48;
+  --good:#5CCB92; --good-soft:#163526; --warn:#E8B54D; --warn-soft:#3A2E12; --bad:#F2877D; --bad-soft:#3D1D1A; --info-soft:#1B2533;
+  --shadow:0 8px 28px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+
+/* Header */
+.top{background:var(--surface);border-bottom:1px solid var(--line);padding-inline:20px}
+.top-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-block:12px;max-width:1360px;margin-inline:auto}
+.brand{display:flex;flex-direction:column}
+.brand b{font-size:18px}
+.badge-stage{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:2px 6px;margin-left:8px;vertical-align:2px}
+.top-tools{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.field-inline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.field-inline select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--ink)}
+.switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.switch input{appearance:none;width:34px;height:20px;border-radius:10px;background:var(--line);position:relative;cursor:pointer;margin:0}
+.switch input::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:left .15s}
+.switch input:checked{background:var(--warn)}
+.switch input:checked::after{left:17px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;max-width:1360px;margin-inline:auto}
+nav.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:500}
+nav.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs button.new-tab::after{content:"New";font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+nav.tabs button:disabled{opacity:.5;cursor:default}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px;max-width:1360px;margin-inline:auto;padding:20px}
+@media (max-width:980px){.shell{grid-template-columns:1fr}.guide{order:-1}}
+main{min-width:0;display:flex;flex-direction:column;gap:16px}
+.page-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.page-head h1{font-size:22px;font-weight:600}
+.page-head .spacer{flex:1}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.panel-pad{padding:16px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--sunken)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-primary:hover{background:var(--accent);filter:brightness(1.08)}
+.btn-danger{color:var(--bad)}
+.btn-sm{padding:4px 9px;font-size:13px}
+.btn:focus-visible,nav.tabs button:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible,.channel:focus-visible,.pay-opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.linkish{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font-weight:500}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px}
+.kpi .label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .value{font-size:22px;font-weight:600;margin-top:4px}
+.kpi .sub{font-size:12px;color:var(--muted)}
+
+/* Tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.clickable{cursor:pointer}
+tbody tr.clickable:hover{background:var(--sunken)}
+.cust b{display:block;font-weight:500}
+.cust span{font-size:12px;color:var(--muted)}
+
+/* Status pills */
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.s-paid,.s-approved{background:var(--good-soft);color:var(--good)}
+.s-sent{background:var(--info-soft);color:var(--accent)}
+.s-opened,.s-pending{background:var(--warn-soft);color:var(--warn)}
+.s-expired,.s-cancelled{background:var(--sunken);color:var(--muted)}
+.s-declined,.s-failed{background:var(--bad-soft);color:var(--bad)}
+
+/* Filter chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chips .search{margin-left:auto;border:1px solid var(--line);border-radius:7px;padding:5px 10px;background:var(--surface);min-width:0;width:220px;max-width:100%}
+
+/* Guide rail */
+.guide{display:flex;flex-direction:column;gap:12px;align-self:start;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:980px){.guide{position:static}.guide .steps{max-height:60vh;overflow-y:auto}}
+.steps::-webkit-scrollbar{width:8px}.steps::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+
+.guide h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.scn{display:flex;flex-direction:column;gap:6px}
+.scn-btn{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer}
+.scn-btn:hover{background:var(--sunken)}
+.scn-btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.scn-btn .n{width:24px;height:24px;border-radius:50%;background:var(--sunken);display:grid;place-items:center;font-weight:600;font-size:12px}
+.scn-btn[aria-pressed="true"] .n{background:var(--accent);color:var(--accent-ink)}
+.scn-btn b{display:block;font-weight:600}
+.scn-btn span{font-size:12px;color:var(--muted)}
+.steps{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.steps h3{font-size:15px}
+.steps .story{font-size:13px;color:var(--muted)}
+.steps ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:st}
+.steps li{display:grid;grid-template-columns:24px 1fr;gap:10px;font-size:14px;color:var(--muted);counter-increment:st;align-items:start}
+.steps li::before{content:counter(st);width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--muted)}
+.steps li.done::before{content:"\2713";background:var(--good);border-color:var(--good);color:var(--surface)}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now::before{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.steps .head{display:flex;align-items:center;gap:10px}
+.steps .head .n{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:600;flex:none}
+.progress{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+.progress .bar{height:6px;border-radius:3px;background:var(--sunken);overflow:hidden}
+.progress .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.demo-ctl{border:1.5px dashed var(--warn);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--warn-soft)}
+.demo-ctl .tag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+.demo-ctl p{margin:0;font-size:13px;color:var(--ink)}
+.btn-demo{background:var(--warn);border-color:var(--warn);color:var(--surface);justify-content:center}
+.btn-demo:hover{background:var(--warn);filter:brightness(1.08)}
+.back{align-self:flex-start}
+.inbox{display:flex;flex-direction:column;gap:10px}
+.inbox .app{font-size:12px;font-weight:600;color:var(--muted);text-align:center}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:10px 12px;font-size:13px;max-width:92%}
+.bubble .from{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.tap{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;word-break:break-all;text-align:left}
+.mail{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.mail .subj{font-weight:600}
+.preview-note{font-size:12px;color:var(--muted);text-align:center;margin:0}
+.steps .finish{background:var(--good-soft);color:var(--good);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:500}
+.guide-foot{display:flex;gap:8px;flex-wrap:wrap}
+.guide-target{animation:pulse 1.6s ease-out infinite;position:relative;z-index:1}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.guide-target{animation:none;outline:2px dashed var(--accent);outline-offset:3px}}
+
+/* Drawer + modal */
+.scrim{position:fixed;inset:0;background:rgba(10,15,24,.42);z-index:20;display:flex;justify-content:flex-end}
+.drawer{background:var(--surface);width:min(720px,100%);height:100%;overflow-y:auto;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.drawer-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:2}
+.drawer-head h2{font-size:18px;font-weight:600}
+.drawer-head .x{margin-left:auto}
+.drawer-body{padding:20px;display:flex;flex-direction:column;gap:18px}
+.drawer-foot{margin-top:auto;padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface)}
+.create-grid{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:20px}
+@media (max-width:640px){.create-grid{grid-template-columns:1fr}}
+.form{display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label,.fld .lbl{font-size:12px;font-weight:500;color:var(--muted)}
+.fld input[type=text],.fld input[type=email],.fld input[type=number],.fld select{border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface);width:100%}
+.fld.err input{border-color:var(--bad)}
+.err-msg{font-size:12px;color:var(--bad)}
+.checks{display:flex;flex-wrap:wrap;gap:8px 16px}
+.checks label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
+.checks label.off{color:var(--muted);text-decoration:line-through}
+details.more summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:13px}
+details.more[open] summary{margin-bottom:10px}
+.notice{border-radius:8px;padding:10px 12px;font-size:13px}
+.notice.ok{background:var(--good-soft);color:var(--good)}
+.notice.warn{background:var(--warn-soft);color:var(--warn)}
+.notice.bad{background:var(--bad-soft);color:var(--bad)}
+.notice.info{background:var(--info-soft);color:var(--ink)}
+.notice b{font-weight:600}
+.preview-lbl{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px}
+
+/* Customer checkout (phone) */
+.phone{border:1px solid var(--line);border-radius:22px;background:var(--sunken);padding:14px;display:flex;flex-direction:column;gap:10px}
+.phone .merchant{text-align:center;font-weight:600}
+.phone .amt{text-align:center;font-size:24px;font-weight:600}
+.phone .exp{text-align:center;font-size:12px;color:var(--muted)}
+.pay-opt{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 11px;cursor:pointer;text-align:left;width:100%}
+.pay-opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.modal-scrim{position:fixed;inset:0;background:rgba(10,15,24,.5);z-index:30;display:grid;place-items:center;padding:16px}
+.modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);width:min(400px,100%);max-height:100%;overflow-y:auto}
+.modal-head{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);gap:8px}
+.modal-head b{font-size:14px}
+.modal-head .tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:2px 6px}
+.modal-head .x{margin-left:auto}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.result{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;padding-block:10px}
+.result .big{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:700}
+.result.ok .big{background:var(--good-soft);color:var(--good)}
+.result.no .big{background:var(--bad-soft);color:var(--bad)}
+
+/* Send step */
+.channels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.channels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.channel{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px}
+.channel[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.channel b{font-weight:600}
+.channel span{font-size:12px;color:var(--muted)}
+.msg{background:var(--sunken);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap}
+.linkbox{display:flex;gap:8px;align-items:center;background:var(--sunken);border-radius:8px;padding:8px 10px;overflow-x:auto}
+.qr{width:150px;height:150px;image-rendering:pixelated;background:#fff;padding:8px;border-radius:8px;border:1px solid var(--line)}
+
+/* Link detail */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+@media (max-width:560px){.detail-grid{grid-template-columns:1fr}}
+.kv{display:flex;flex-direction:column;gap:2px}
+.kv span{font-size:12px;color:var(--muted)}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.timeline li{display:grid;grid-template-columns:16px 1fr auto;gap:10px;padding-bottom:12px;position:relative;font-size:13px}
+.timeline li::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:4px}
+.timeline li:not(:last-child)::after{content:"";position:absolute;left:4.5px;top:16px;bottom:0;width:1px;background:var(--line)}
+.timeline time{color:var(--muted);font-family:var(--mono);font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.section-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* Admin */
+.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.admin-grid{grid-template-columns:1fr}}
+.admin-grid h2{font-size:15px;margin-bottom:10px}
+
+/* Toasts */
+.toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;flex-direction:column;gap:8px;max-width:min(360px,calc(100% - 32px))}
+.toast{background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 14px;box-shadow:var(--shadow);font-size:13px}
+.toast b{display:block}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+/* Wide screens: scenarios live in a fixed right column; drawers open beside it, never over it */
+@media (min-width:981px){
+  body{padding-right:340px}
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .guide{position:fixed;top:0;right:0;bottom:0;width:340px;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 16px;background:var(--bg);border-left:1px solid var(--line);z-index:25}
+  .scrim{right:340px}
+  .guide > *{flex:none}
+  .guide .steps{flex:0 1 auto;min-height:120px;overflow-y:auto;overscroll-behavior:contain}
+  .toasts{right:356px}
+}
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand"><b>ProductTest <span class="badge-stage">Prototype</span></b><span class="muted" style="font-size:12px">Client back office · Payment Links concept</span></div>
+    <div class="top-tools">
+      <label class="field-inline" for="role-select">Viewing as
+        <select id="role-select">
+          <option value="agent">Lina · Support agent ($1,000 limit)</option>
+          <option value="lead">Omar · Team lead ($5,000 limit)</option>
+          <option value="admin">Dana · Admin (no limit)</option>
+        </select>
+      </label>
+      <label class="switch" for="test-mode"><input type="checkbox" id="test-mode" checked> Test mode</label>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Back office">
+    <button data-nav="dashboard">Dashboard</button>
+    <button data-nav="orders">Orders</button>
+    <button data-nav="links" class="new-tab">Payment Links</button>
+    <button disabled title="Not part of this prototype">Account</button>
+    <button disabled title="Not part of this prototype">Payouts</button>
+    <button disabled title="Not part of this prototype">Refunds</button>
+    <button disabled title="Not part of this prototype">Reports</button>
+    <button disabled title="Not part of this prototype">Alerts</button>
+    <button data-nav="admin">Administration</button>
+  </nav>
+</header>
+
+<div class="shell">
+  <main id="main" aria-live="polite"></main>
+  <aside class="guide" id="guide" aria-label="Demo scenarios"></aside>
+</div>
+<div id="layer"></div>
+<div class="toasts" id="toasts" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = (n, c = 'USD') => new Intl.NumberFormat('en-US', {style:'currency', currency:c}).format(n);
+const pad = n => String(n).padStart(2, '0');
+let clock = new Date(2026, 9, 9, 14, 5);
+const tick = (min = 1) => { clock = new Date(clock.getTime() + min * 60000); return clock; };
+const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const stamp = d => `${d.toLocaleDateString('en-GB', {day:'numeric', month:'short'})} ${hhmm(d)}`;
+const EMAIL_RE = /^[^\s@,]+@[^\s@,]+\.[A-Za-z]{2,}$/;
+
+const ROLES = {
+  agent: {name:'Lina', title:'Support agent', limit:1000},
+  lead:  {name:'Omar', title:'Team lead', limit:5000},
+  admin: {name:'Dana', title:'Admin', limit:Infinity},
+};
+const METHODS = ['Card', 'eWallet', 'Online Bank Wire', 'Bank Transfer (P2P)'];
+const COUNTRIES = ['Thailand', 'United Arab Emirates', 'United Kingdom', 'Germany', 'Palestine'];
+// Example risk rule taken from our real test: country PS was blocked for card processing.
+const blockedCard = country => country === 'Palestine';
+
+/* ---------- state ---------- */
+let S;
+let seq;
+function seed() {
+  seq = 1046;
+  const t = d => new Date(2026, 9, d[0], d[1], d[2]);
+  S = {
+    view: 'links', filter: 'All', q: '', role: 'agent', testMode: true,
+    scenario: null, step: 0, drawer: null, modal: null,
+    links: [
+      {id:'PL-1045', name:'John Carter', email:'john.carter@mail.com', phone:'+44 7700 900123', country:'United Kingdom', amount:100, currency:'USD', methods:['Card','eWallet'], expiry:48, single:true, status:'Paid', by:'Lina', created:t([9,9,12]), channel:'Email',
+        events:[{t:t([9,9,12]),l:'Created by Lina'},{t:t([9,9,13]),l:'Sent by email'},{t:t([9,10,2]),l:'Opened by customer'},{t:t([9,10,4]),l:'Paid by card · order ORD-88190'}]},
+      {id:'PL-1044', name:'Anna Schmidt', email:'anna.schmidt@mail.de', phone:'', country:'Germany', amount:250, currency:'EUR', methods:['Online Bank Wire'], expiry:48, single:true, status:'Opened', by:'Omar', created:t([9,8,40]), channel:'SMS',
+        events:[{t:t([9,8,40]),l:'Created by Omar'},{t:t([9,8,41]),l:'Sent by SMS'},{t:t([9,11,15]),l:'Opened by customer'}]},
+      {id:'PL-1043', name:'Li Wei', email:'li.wei@mail.com', phone:'', country:'Thailand', amount:40, currency:'USD', methods:['Card'], expiry:24, single:true, status:'Expired', by:'Lina', created:t([7,16,0]), channel:'Email',
+        events:[{t:t([7,16,0]),l:'Created by Lina'},{t:t([7,16,1]),l:'Sent by email'},{t:t([8,15,0]),l:'Reminder sent'},{t:t([8,16,0]),l:'Expired unpaid'}]},
+    ],
+    orders: [
+      {id:'ORD-88213', name:'Sara Haddad', email:'sara.haddad@mail.com', country:'United Arab Emirates', amount:100, currency:'USD', method:'Card', status:'Declined', reason:'Card declined by issuer', time:t([9,13,42]), link:null},
+      {id:'ORD-88207', name:'Mark Evans', email:'mark.evans@mail.co.uk', country:'United Kingdom', amount:75, currency:'GBP', method:'Card', status:'Declined', reason:'Insufficient funds', time:t([9,12,58]), link:null},
+      {id:'ORD-88201', name:'Nina Rossi', email:'nina.rossi@mail.it', country:'Germany', amount:300, currency:'EUR', method:'Online Bank Wire', status:'Failed', reason:'Customer left the bank page', time:t([9,11,20]), link:null},
+      {id:'ORD-88190', name:'John Carter', email:'john.carter@mail.com', country:'United Kingdom', amount:100, currency:'USD', method:'Card', status:'Approved', reason:'', time:t([9,10,4]), link:'PL-1045'},
+    ],
+    audit: [
+      {t:t([9,10,4]), who:'System', what:'PL-1045 paid · $100.00'},
+      {t:t([9,8,41]), who:'Omar', what:'Sent PL-1044 by SMS'},
+      {t:t([9,8,40]), who:'Omar', what:'Created PL-1044 · €250.00'},
+    ],
+  };
+}
+const me = () => ROLES[S.role];
+const link = id => S.links.find(l => l.id === id);
+const log = (what, who = me().name) => S.audit.unshift({t: new Date(clock), who, what});
+
+/* ---------- scenarios ---------- */
+const SCENARIOS = [
+  { key:'cs', title:'Customer service bills a customer', sub:'Ahmed can’t deposit on the website', role:'agent',
+    story:'Ahmed calls support: “I want to deposit $500 but the website isn’t working.” Lina, a support agent, sends him a link while he’s on the phone.',
+    example:{name:'Ahmed Saleh', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:500, currency:'USD', methods:['Card','eWallet'], expiry:24, payWith:'Card'},
+    steps:[
+      {t:'Open the Payment Links tab', sel:'[data-nav="links"]', ev:'nav:links'},
+      {t:'Click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Press “Fill Ahmed’s details” (or type them), then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
+      {t:'Choose SMS and send the link', sel:'[data-channel="SMS"]', ev:'sent'},
+      {t:'Play the customer: open Ahmed\u2019s phone and tap the link in the SMS', sel:'[data-action="simulate"]', ev:'customer:open'},
+      {t:'Pay with the test card (CVV 000)', sel:'#pay-btn', ev:'paid'},
+    ],
+    done:'Ahmed paid on his phone. Lina got a notification and the link shows Paid.'},
+  { key:'recovery', title:'Recover a failed checkout', sub:'Sara’s card was declined', role:'agent',
+    story:'Sara tried to deposit $100 on the website, but her card was declined and she gave up. The team sends her a recovery link with another way to pay.',
+    steps:[
+      {t:'Open Orders', sel:'[data-nav="orders"]', ev:'nav:orders'},
+      {t:'Click “Send recovery link” on Sara’s declined order', sel:'[data-action="recover"][data-id="ORD-88213"]', ev:'recovery:open'},
+      {t:'Everything is prefilled and eWallet was added. Click Continue', sel:'#create-continue', ev:'create:continue'},
+      {t:'Send it by email', sel:'[data-channel="Email"]', ev:'sent'},
+      {t:'Play the customer: open Sara\u2019s email and tap the link', sel:'[data-action="simulate"]', ev:'customer:open'},
+      {t:'Pay with eWallet', sel:'#pay-btn', ev:'paid'},
+    ],
+    done:'The failed $100 deposit was recovered. The new order is linked to the declined one in Orders.'},
+  { key:'invoice', title:'Collect a payment by hand', sub:'A $2,000 invoice with 7 days to pay', role:'admin',
+    story:'A business customer owes $2,000. Dana in finance sends a link that works like an invoice and stays valid for 7 days.',
+    example:{name:'Orion Trading LLC', email:'accounts@oriontrading.com', phone:'', country:'United Kingdom', amount:2000, currency:'USD', methods:['Card','Online Bank Wire'], expiry:168, ref:'INV-2026-0412', payWith:'Online Bank Wire'},
+    steps:[
+      {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Fill the invoice details (7 days), then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
+      {t:'Send it by email', sel:'[data-channel="Email"]', ev:'sent'},
+      {t:'Days pass with no payment. Send a reminder', sel:'[data-action="remind"]', ev:'reminder'},
+      {t:'Play the customer: open their email and tap the link', sel:'[data-action="simulate"]', ev:'customer:open'},
+      {t:'Pay by Online Bank Wire', sel:'#pay-btn', ev:'paid'},
+    ],
+    done:'The invoice was paid after one reminder, and everything is recorded in the link’s history.'},
+  { key:'sales', title:'Sales closes a deal', sub:'A VIP package paid by QR code', role:'lead',
+    story:'Omar agrees a $3,500 VIP package with a customer in a meeting. He shows a QR code, and the customer pays on the spot.',
+    example:{name:'Karim Nassar', email:'karim.nassar@mail.com', phone:'+971 55 765 4321', country:'United Arab Emirates', amount:3500, currency:'USD', methods:['Card','eWallet'], expiry:2, payWith:'Card'},
+    steps:[
+      {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Fill Karim’s details, then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
+      {t:'Choose QR code', sel:'[data-channel="QR code"]', ev:'sent'},
+      {t:'Play the customer: Karim scans the QR code', sel:'[data-action="simulate"]', ev:'customer:open'},
+      {t:'Pay with the test card', sel:'#pay-btn', ev:'paid'},
+    ],
+    done:'The deal closed while the customer was still in the meeting.'},
+  { key:'control', title:'The admin stays in control', sub:'Limits, approval and history', role:'agent',
+    story:'Agents can send links, but only up to $1,000. Lina needs to send $1,500, so her team lead has to approve it first.',
+    example:{name:'Ahmed Saleh', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:1500, currency:'USD', methods:['Card'], expiry:24},
+    steps:[
+      {t:'As Lina, open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Fill a $1,500 link and click “Request approval”', sel:'[data-action="fill-example"]', ev:'approval:requested'},
+      {t:'Switch “Viewing as” to Omar, the team lead', sel:'#role-select', ev:'role:lead'},
+      {t:'Open the link waiting for approval and approve it', sel:'[data-action="approve"]', ev:'approved'},
+      {t:'Open Administration to see limits and the full history', sel:'[data-nav="admin"]', ev:'nav:admin'},
+    ],
+    done:'The large link went out only after approval, and every action is in the audit log.'},
+  { key:'errors', title:'Mistakes caught before sending', sub:'What went wrong in our own test', role:'agent',
+    story:'In our test of the internal tool, “gmail,com” was accepted and the country block only showed up at payment. Here both are caught while the agent is still typing.',
+    example:{name:'Bana Hidmi', email:'banahidmi13@gmail,com', phone:'', country:'Palestine', amount:100, currency:'USD', methods:['Card'], expiry:48},
+    steps:[
+      {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Press “Fill test details” and read the warnings', sel:'[data-action="fill-example"]', ev:'errors:shown'},
+      {t:'Fix the email (gmail.com) and tick eWallet instead of Card', sel:'#f-email', ev:'errors:fixed'},
+      {t:'Continue and send by email', sel:'#create-continue', ev:'sent'},
+    ],
+    done:'The agent fixed both problems before the customer ever saw the link.'},
+];
+
+function emit(ev) {
+  const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
+  if (!sc) return;
+  const st = sc.steps[S.step];
+  if (st && st.ev === ev) { S.step++; renderGuide(); applyGuide(); }
+}
+function startScenario(key) {
+  const sc = SCENARIOS.find(s => s.key === key);
+  S.scenario = key; S.step = 0; S.drawer = null; S.modal = null; S.lastLink = null;
+  setRole(sc.role, true);
+  S.view = (key === 'recovery') ? 'dashboard' : (key === 'cs' ? 'dashboard' : 'links');
+  render();
+}
+
+/* ---------- rendering ---------- */
+function render() {
+  document.querySelectorAll('nav.tabs [data-nav]').forEach(b => b.setAttribute('aria-current', b.dataset.nav === S.view ? 'page' : 'false'));
+  $('#role-select').value = S.role;
+  $('#test-mode').checked = S.testMode;
+  $('#main').innerHTML = ({dashboard:viewDashboard, orders:viewOrders, links:viewLinks, admin:viewAdmin})[S.view]();
+  renderGuide();
+  renderLayer();
+  drawQR();
+  applyGuide();
+}
+
+function pill(status) {
+  const cls = {'Paid':'s-paid','Approved':'s-approved','Sent':'s-sent','Opened':'s-opened','Pending approval':'s-pending','Expired':'s-expired','Cancelled':'s-cancelled','Declined':'s-declined','Failed':'s-failed','Draft':'s-expired'}[status] || 's-sent';
+  return `<span class="pill ${cls}">${esc(status)}</span>`;
+}
+
+function viewDashboard() {
+  const paid = S.links.filter(l => l.status === 'Paid');
+  const sent = S.links.filter(l => l.status !== 'Pending approval');
+  const recovered = S.orders.filter(o => o.recovered && o.status === 'Approved').reduce((a, o) => a + o.amount, 0);
+  const failed = S.orders.filter(o => o.status !== 'Approved' && !o.link).length;
+  return `
+  <div class="page-head"><h1>Good afternoon, ${esc(me().name)}.</h1><span class="spacer"></span>
+    <button class="btn btn-primary" data-action="new-link">+ New payment link</button></div>
+  <div class="kpis">
+    <div class="panel kpi"><div class="label">Links sent</div><div class="value num">${sent.length}</div><div class="sub">Today and earlier this week</div></div>
+    <div class="panel kpi"><div class="label">Paid</div><div class="value num">${paid.length}</div><div class="sub num">${sent.length ? Math.round(paid.length / sent.length * 100) : 0}% of sent links</div></div>
+    <div class="panel kpi"><div class="label">Recovered</div><div class="value num">${money(recovered)}</div><div class="sub">From failed deposits</div></div>
+    <div class="panel kpi"><div class="label">Failed deposits</div><div class="value num">${failed}</div><div class="sub">Not yet followed up</div></div>
+  </div>
+  ${failed ? `<div class="notice warn"><b>${failed} failed deposit${failed > 1 ? 's' : ''} today.</b> Customers who fail at checkout often pay when offered another method. <button class="linkish" data-nav="orders">Review in Orders</button></div>` : ''}
+  <div class="panel"><div class="panel-pad" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>Latest payment links</b><span class="spacer" style="flex:1"></span><button class="linkish" data-nav="links">See all</button></div>
+  ${linksTable(S.links.slice(0, 4))}</div>`;
+}
+
+function viewOrders() {
+  const rows = S.orders.map(o => {
+    const canRecover = o.status !== 'Approved' && !o.link;
+    return `<tr>
+      <td><input type="checkbox" id="sel-${o.id}" aria-label="Select ${o.id}" ${canRecover ? '' : 'disabled'} data-select="${o.id}"></td>
+      <td class="mono">${o.id}</td>
+      <td class="cust"><b>${esc(o.name)}</b><span>${esc(o.email)}</span></td>
+      <td class="num">${money(o.amount, o.currency)}</td>
+      <td>${esc(o.method)}${o.recovered ? ' <span class="muted">· via link</span>' : ''}</td>
+      <td>${pill(o.status)}${o.reason ? `<div class="muted" style="font-size:12px">${esc(o.reason)}</div>` : ''}</td>
+      <td class="mono muted">${hhmm(o.time)}</td>
+      <td>${canRecover ? `<button class="btn btn-sm" data-action="recover" data-id="${o.id}">Send recovery link</button>`
+        : o.link ? `<button class="linkish" data-action="open-link" data-id="${o.link}">${o.link}</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+  return `
+  <div class="page-head"><h1>Orders</h1><span class="spacer"></span>
+    <button class="btn" data-action="bulk-recover">Send recovery links to selected</button></div>
+  <div class="panel"><div class="table-wrap"><table>
+    <thead><tr><th></th><th>Order</th><th>Customer</th><th>Amount</th><th>Method</th><th>Status</th><th>Time</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div>
+  <p class="muted" style="margin:0;font-size:13px">Orders paid through a link are tagged with the link ID, so you can always see where the money came from.</p>`;
+}
+
+function linksTable(list) {
+  if (!list.length) return `<div class="empty">No links match this filter.</div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Link</th><th>Customer</th><th>Amount</th><th>Methods</th><th>Status</th><th>Created by</th><th>Expires</th></tr></thead>
+    <tbody>${list.map(l => `<tr class="clickable" data-action="open-link" data-id="${l.id}" ${l.status === 'Pending approval' ? 'data-pending="1"' : ''}>
+      <td class="mono">${l.id}</td>
+      <td class="cust"><b>${esc(l.name)}</b><span>${esc(l.email || l.phone)}</span></td>
+      <td class="num">${money(l.amount, l.currency)}</td>
+      <td>${esc(l.methods.join(', '))}</td>
+      <td>${pill(l.status)}</td>
+      <td>${esc(l.by)}</td>
+      <td class="muted">${expiresText(l)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function expiresText(l) {
+  if (['Paid','Expired','Cancelled'].includes(l.status)) return '–';
+  if (l.status === 'Pending approval') return 'After approval';
+  return l.expiry >= 48 ? `in ${Math.round(l.expiry / 24)} days` : `in ${l.expiry} h`;
+}
+
+function viewLinks() {
+  const counts = s => S.links.filter(l => s === 'All' || l.status === s || (s === 'Open' && ['Sent','Opened','Pending approval'].includes(l.status))).length;
+  const list = S.links.filter(l => (S.filter === 'All' || l.status === S.filter || (S.filter === 'Open' && ['Sent','Opened','Pending approval'].includes(l.status))))
+    .filter(l => !S.q || (l.name + l.email + l.id).toLowerCase().includes(S.q.toLowerCase()));
+  return `
+  <div class="page-head"><h1>Payment Links</h1><span class="spacer"></span>
+    <button class="btn btn-primary" data-action="new-link">+ New payment link</button></div>
+  <div class="panel">
+    <div class="chips">${['All','Open','Paid','Expired','Cancelled'].map(f => `<button class="chip" data-filter="${f}" aria-pressed="${S.filter === f}">${f} <span class="muted num">${counts(f)}</span></button>`).join('')}
+      <input class="search" id="search" type="search" placeholder="Search customer or link ID" value="${esc(S.q)}" aria-label="Search links"></div>
+    ${linksTable(list)}
+  </div>`;
+}
+
+function viewAdmin() {
+  const fmtLimit = r => r.limit === Infinity ? 'No limit' : money(r.limit);
+  return `
+  <div class="page-head"><h1>Administration</h1></div>
+  <div class="admin-grid">
+    <div class="panel panel-pad"><h2>Who can send payment links</h2>
+      <div class="table-wrap"><table style="min-width:0"><thead><tr><th>Role</th><th>Person</th><th>Max per link</th><th>Approves</th></tr></thead><tbody>
+        <tr><td>Support agent</td><td>Lina</td><td class="num">${fmtLimit(ROLES.agent)}</td><td>No</td></tr>
+        <tr><td>Team lead</td><td>Omar</td><td class="num">${fmtLimit(ROLES.lead)}</td><td>Agent links</td></tr>
+        <tr><td>Admin</td><td>Dana</td><td class="num">${fmtLimit(ROLES.admin)}</td><td>All links</td></tr>
+      </tbody></table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Links above a person’s limit wait for approval. Two-step login is required for every role that can create links.</p></div>
+    <div class="panel panel-pad"><h2>Link defaults</h2>
+      <div class="form">
+        <div class="row2"><div class="fld"><label for="d-exp">Default expiry</label><select id="d-exp"><option>24 hours</option><option selected>48 hours</option><option>7 days</option></select></div>
+        <div class="fld"><label for="d-use">Default use</label><select id="d-use"><option selected>Single use</option><option>Reusable</option></select></div></div>
+        <div class="fld"><label for="d-rem">Automatic reminder</label><select id="d-rem"><option selected>24 hours before expiry</option><option>Off</option></select></div>
+        <div class="fld"><span class="lbl">SMS template</span><div class="msg">Hi {customer_name}, here is your secure link to pay {amount} to ProductTest: {link}. It expires {expiry}.</div></div>
+      </div></div>
+    <div class="panel panel-pad" style="grid-column:1/-1"><h2>Audit log</h2>
+      <div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody>
+      ${S.audit.map(a => `<tr><td class="mono muted">${stamp(a.t)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}</td></tr>`).join('')}
+      </tbody></table></div></div>
+  </div>`;
+}
+
+/* ---------- guide ---------- */
+function renderGuide() {
+  const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
+  let html;
+  if (!sc) {
+    html = `<h2>Scenarios to try</h2>
+      <p class="muted" style="margin:0;font-size:13px">Pick one. You’ll see its steps, and the next thing to click pulses on the screen.</p>
+      <div class="scn">${SCENARIOS.map((s, i) => `
+      <button class="scn-btn" data-scenario="${s.key}" aria-pressed="false"><span class="n">${i + 1}</span><span><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></span></button>`).join('')}</div>`;
+  } else {
+    const idx = SCENARIOS.indexOf(sc) + 1;
+    const n = sc.steps.length, doneN = Math.min(S.step, n), finished = S.step >= n;
+    const cur = sc.steps[S.step];
+    const showPlay = cur && ['customer:open', 'paid'].includes(cur.ev) && !S.modal && S.lastLink;
+    const who = S.lastLink ? (link(S.lastLink).name || 'the customer').split(' ')[0] : '';
+    html = `<button class="btn btn-sm back" data-action="all-scenarios">← All scenarios</button>
+      <div class="panel steps">
+        <div class="head"><span class="n">${idx}</span><h3>${esc(sc.title)}</h3></div>
+        <p class="story" style="margin:0">${esc(sc.story)}</p>
+        <div class="progress"><span>${finished ? 'Completed' : `Step ${doneN + 1} of ${n}`}</span><div class="bar"><i style="width:${doneN / n * 100}%"></i></div></div>
+        <ol>${sc.steps.map((st, i) => `<li class="${i < S.step ? 'done' : i === S.step ? 'now' : ''}">${esc(st.t)}</li>`).join('')}</ol>
+        ${finished ? `<div class="finish">${esc(sc.done)}</div>` : ''}
+      </div>
+      ${showPlay ? `<div class="demo-ctl"><span class="tag">Demo control</span><p>In real life the customer gets the link on their own device. Step into their shoes:</p>
+        <button class="btn btn-demo" data-action="simulate">Play the customer: open ${esc(who)}’s phone</button></div>` : ''}
+      ${finished ? `<button class="btn btn-primary" data-action="all-scenarios">Try another scenario</button>` : ''}`;
+  }
+  html += `<div class="guide-foot"><button class="btn btn-sm" data-action="reset">Reset demo</button></div>`;
+  $('#guide').innerHTML = html;
+  const now = $('#guide .steps li.now') || $('#guide .finish');
+  if (now) { const box = $('#guide .steps'); box.scrollTop = Math.max(0, now.offsetTop - box.offsetTop - box.clientHeight / 2 + now.offsetHeight / 2); }
+}
+function applyGuide() {
+  document.querySelectorAll('.guide-target').forEach(e => e.classList.remove('guide-target'));
+  const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
+  if (!sc || S.step >= sc.steps.length) return;
+  let sel = sc.steps[S.step].sel;
+  // "New payment link" lives on more than one page; point at the tab first if needed.
+  let el = document.querySelector('#layer ' + sel) || document.querySelector(sel);
+  if (!el && sel === '[data-action="new-link"]') el = document.querySelector('[data-nav="links"]');
+  if (!el && sel === '[data-action="fill-example"]') el = document.querySelector('#create-continue');
+  if (!el && sel === '[data-action="simulate"]') el = document.querySelector('[data-action="open-link"]');
+  const draft = S.drawer?.type === 'create' ? S.drawer.draft : null;
+  if (sel === '[data-action="fill-example"]' && draft && sc.example && draft.name === sc.example.name && S.scenario !== 'errors') el = document.querySelector('#create-continue');
+  if (!el && sel === '[data-action="approve"]') el = document.querySelector('[data-pending="1"]') || document.querySelector('[data-nav="links"]');
+  if (sc.steps[S.step].ev === 'sent' && S.drawer?.type === 'send') el = S.drawer.channel ? document.querySelector('#send-btn') : (document.querySelector(sel) || document.querySelector('[data-channel="Email"]'));
+  if (S.modal?.stage === 'inbox') el = document.querySelector('[data-action="tap-link"]');
+  if (!el && sel === '#pay-btn') el = document.querySelector('#guide [data-action="simulate"]');
+  if (sel === '#pay-btn' && S.modal?.stage === 'checkout' && !S.modal.method) {
+    const want = sc.key === 'recovery' ? 'eWallet' : (sc.example?.payWith || 'Card');
+    el = document.querySelector(`[data-pay="${want}"]`) || el;
+  }
+  if (el) el.classList.add('guide-target');
+}
+
+/* ---------- layer: drawers & modals ---------- */
+function renderLayer() {
+  let html = '';
+  if (S.drawer?.type === 'create') html += drawerCreate();
+  if (S.drawer?.type === 'send') html += drawerSend();
+  if (S.drawer?.type === 'detail') html += drawerDetail();
+  if (S.modal) html += modalCustomer();
+  $('#layer').innerHTML = html;
+}
+
+function blankDraft() {
+  return {name:'', email:'', phone:'', country:'United Arab Emirates', amount:'', currency:'USD', methods:['Card'], expiry:48, single:true, ref:'', desc:'', from:null, touched:false};
+}
+function validate(d) {
+  const e = {};
+  const amt = Number(d.amount);
+  if (!d.amount || !(amt > 0)) e.amount = 'Enter an amount above 0.';
+  if (!d.email && !d.phone) e.email = 'Add an email or a phone number so we can send the link.';
+  else if (d.email && !EMAIL_RE.test(d.email)) e.email = `Check the email address. “${d.email}” isn’t valid${d.email.includes(',') ? ' (there’s a comma where a dot should be)' : ''}.`;
+  if (!d.methods.length) e.methods = 'Choose at least one payment method.';
+  if (d.methods.includes('Card') && blockedCard(d.country)) e.methods = `Card payments aren’t allowed for customers in ${d.country} on your account. Offer eWallet or Online Bank Wire instead, or ask support to enable it.`;
+  return e;
+}
+
+function drawerCreate() {
+  const d = S.drawer.draft;
+  const e = d.touched ? validate(d) : {};
+  const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
+  const ex = sc?.example && !d.from;
+  const over = Number(d.amount) > me().limit;
+  const allErr = validate(d);
+  const ok = d.touched && !Object.keys(allErr).length;
+  return `<div class="scrim" data-close="drawer"><section class="drawer" role="dialog" aria-modal="true" aria-label="New payment link">
+  <div class="drawer-head"><h2>${d.from ? 'Recovery link' : 'New payment link'}</h2>${S.testMode ? '<span class="badge-stage">Test mode</span>' : ''}
+    <button class="btn btn-sm x" data-close="drawer">Close</button></div>
+  <div class="drawer-body">
+    ${d.from ? `<div class="notice info"><b>Prefilled from failed order ${esc(d.from)}.</b> The card was declined, so eWallet has been added as another way to pay.</div>` : ''}
+    ${ex ? `<div><button class="btn btn-sm" data-action="fill-example">Fill ${S.scenario === 'errors' ? 'test details' : esc(sc.example.name.split(' ')[0]) + '’s details'}</button></div>` : ''}
+    <div class="create-grid">
+      <div class="form">
+        <div class="row2">
+          <div class="fld ${e.amount ? 'err' : ''}"><label for="f-amount">Amount *</label><input type="text" inputmode="decimal" id="f-amount" value="${esc(d.amount)}" placeholder="0.00">${e.amount ? `<span class="err-msg">${e.amount}</span>` : ''}</div>
+          <div class="fld"><label for="f-currency">Currency *</label><select id="f-currency">${['USD','EUR','GBP','THB'].map(c => `<option ${c === d.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+        </div>
+        <div class="fld"><label for="f-name">Customer name</label><input type="text" id="f-name" value="${esc(d.name)}" placeholder="e.g. Ahmed Saleh"></div>
+        <div class="row2">
+          <div class="fld ${e.email ? 'err' : ''}"><label for="f-email">Email *</label><input type="text" inputmode="email" id="f-email" value="${esc(d.email)}" placeholder="name@example.com"></div>
+          <div class="fld"><label for="f-phone">or Phone</label><input type="text" id="f-phone" value="${esc(d.phone)}" placeholder="+971 50 000 0000"></div>
+        </div>
+        ${e.email ? `<span class="err-msg" style="margin-top:-8px">${esc(e.email)}</span>` : ''}
+        <div class="fld"><label for="f-country">Customer country</label><select id="f-country">${COUNTRIES.map(c => `<option ${c === d.country ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+        <div class="fld"><span class="lbl">Payment methods your account supports</span>
+          <div class="checks">${METHODS.map((m, i) => `<label for="f-m${i}"><input type="checkbox" id="f-m${i}" data-method="${m}" ${d.methods.includes(m) ? 'checked' : ''}> ${m}</label>`).join('')}</div>
+          ${e.methods ? `<span class="err-msg">${esc(e.methods)}</span>` : ''}</div>
+        <div class="row2">
+          <div class="fld"><label for="f-expiry">Link expires</label><select id="f-expiry">${[[2,'2 hours'],[24,'24 hours'],[48,'48 hours'],[168,'7 days']].map(([v, t]) => `<option value="${v}" ${v === d.expiry ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="fld"><label for="f-use">Use</label><select id="f-use"><option value="1" ${d.single ? 'selected' : ''}>Single use</option><option value="0" ${d.single ? '' : 'selected'}>Reusable</option></select></div>
+        </div>
+        <details class="more" ${d.ref || d.desc ? 'open' : ''}><summary>More details (reference, description)</summary>
+          <div class="form"><div class="row2"><div class="fld"><label for="f-ref">Your reference</label><input type="text" id="f-ref" value="${esc(d.ref)}" placeholder="e.g. INV-2026-0412"></div>
+          <div class="fld"><label for="f-desc">Description</label><input type="text" id="f-desc" value="${esc(d.desc)}" placeholder="Shown to the customer"></div></div></div></details>
+        ${ok ? `<div class="notice ok"><b>Ready to send.</b> ${esc(d.country)}, ${esc(d.currency)} and ${esc(d.methods.join(', '))} are allowed on your account.</div>` : ''}
+        ${ok && over ? `<div class="notice warn"><b>Needs approval.</b> ${money(Number(d.amount), d.currency)} is above your ${money(me().limit)} limit. A team lead will be asked to approve it.</div>` : ''}
+      </div>
+      <div><div class="preview-lbl">The customer will see</div>${phoneView(d, false)}</div>
+    </div>
+  </div>
+  <div class="drawer-foot"><button class="btn" data-close="drawer">Cancel</button>
+    <button class="btn btn-primary" id="create-continue" data-action="create-continue">${over && Number(d.amount) > 0 ? 'Request approval' : 'Continue'}</button></div>
+  </section></div>`;
+}
+
+function phoneView(d, live, sel) {
+  const amt = Number(d.amount) || 0;
+  const exp = d.expiry >= 48 ? `${Math.round(d.expiry / 24)} days` : `${d.expiry} hours`;
+  return `<div class="phone">
+    <div class="merchant">ProductTest</div>
+    <div class="amt num">${money(amt, d.currency)}</div>
+    ${d.desc ? `<div class="exp">${esc(d.desc)}</div>` : ''}
+    ${d.methods.length ? d.methods.map(m => live
+      ? `<button class="pay-opt" data-pay="${m}" aria-pressed="${sel === m}">${m}</button>`
+      : `<div class="pay-opt" aria-hidden="true">${m}</div>`).join('') : '<div class="exp">No payment methods chosen</div>'}
+    <div class="exp">Link expires in ${exp}</div></div>`;
+}
+
+const fakeUrl = id => `pay.example/l/${id.toLowerCase().replace('pl-', '')}x7k`;
+function drawerSend() {
+  const l = link(S.drawer.id);
+  const ch = S.drawer.channel;
+  const first = (l.name || 'there').split(' ')[0];
+  const exp = l.expiry >= 48 ? `in ${Math.round(l.expiry / 24)} days` : `in ${l.expiry} hours`;
+  const body = {
+    'SMS': `Hi ${first}, here is your secure link to pay ${money(l.amount, l.currency)} to ProductTest: ${fakeUrl(l.id)}. It expires ${exp}.`,
+    'Email': `Subject: Your payment link from ProductTest\n\nHi ${first},\n\nYou can pay ${money(l.amount, l.currency)}${l.ref ? ` for ${l.ref}` : ''} securely here:\n${fakeUrl(l.id)}\n\nThe link expires ${exp}.\n\nProductTest support`,
+  }[ch];
+  return `<div class="scrim" data-close="drawer"><section class="drawer" role="dialog" aria-modal="true" aria-label="Send link">
+  <div class="drawer-head"><h2>Send ${l.id}</h2><button class="btn btn-sm x" data-close="drawer">Close</button></div>
+  <div class="drawer-body">
+    <div class="notice ok"><b>Link created.</b> ${money(l.amount, l.currency)} for ${esc(l.name || l.email)}. Choose how to send it.</div>
+    <div class="channels">${[['Copy link','Paste it into chat or WhatsApp'],['Email', esc(l.email || 'No email given')],['SMS', esc(l.phone || 'No phone given')],['QR code','Customer scans it in person']].map(([c, s]) => `
+      <button class="channel" data-channel="${c}" aria-pressed="${ch === c}" ${(c === 'Email' && !l.email) || (c === 'SMS' && !l.phone) ? 'disabled style="opacity:.5;cursor:default"' : ''}><b>${c}</b><span>${s}</span></button>`).join('')}</div>
+    ${ch === 'QR code' ? `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><canvas class="qr" id="qr" width="29" height="29" aria-label="QR code for ${l.id}"></canvas><p class="muted" style="margin:0;max-width:30ch">The customer scans this with their phone camera and lands on the checkout.</p></div>` : ''}
+    ${ch === 'Copy link' ? `<div class="linkbox"><span class="mono">https://${fakeUrl(l.id)}</span></div>` : ''}
+    ${body ? `<div><div class="preview-lbl">Message (from your template)</div><div class="msg">${esc(body)}</div></div>` : ''}
+  </div>
+  <div class="drawer-foot"><button class="btn" data-close="drawer">Later</button>
+    <button class="btn btn-primary" id="send-btn" data-action="send" ${ch ? '' : 'disabled'}>${ch === 'Copy link' ? 'Copy link' : ch === 'QR code' ? 'Done' : ch ? 'Send ' + ch : 'Choose a channel'}</button></div>
+  </section></div>`;
+}
+
+function drawerDetail() {
+  const l = link(S.drawer.id);
+  const open = ['Sent','Opened'].includes(l.status);
+  const pending = l.status === 'Pending approval';
+  const canApprove = pending && S.role !== 'agent';
+  return `<div class="scrim" data-close="drawer"><section class="drawer" role="dialog" aria-modal="true" aria-label="Link ${l.id}">
+  <div class="drawer-head"><h2 class="mono">${l.id}</h2>${pill(l.status)}<button class="btn btn-sm x" data-close="drawer">Close</button></div>
+  <div class="drawer-body">
+    ${pending ? `<div class="notice warn"><b>Waiting for approval.</b> ${money(l.amount, l.currency)} is above ${esc(l.by)}’s limit. ${canApprove ? 'You can approve it.' : 'Switch “Viewing as” to Omar (team lead) to approve.'}</div>` : ''}
+    <div class="detail-grid">
+      <div class="kv"><span>Amount</span><b class="num">${money(l.amount, l.currency)}</b></div>
+      <div class="kv"><span>Customer</span><b>${esc(l.name || '–')}</b><span>${esc([l.email, l.phone].filter(Boolean).join(' · '))}</span></div>
+      <div class="kv"><span>Payment methods</span><b>${esc(l.methods.join(', '))}</b></div>
+      <div class="kv"><span>Expires</span><b>${expiresText(l)}</b></div>
+      <div class="kv"><span>Created by</span><b>${esc(l.by)}</b></div>
+      <div class="kv"><span>Link</span><b class="mono" style="font-size:12px">https://${fakeUrl(l.id)}</b></div>
+      ${l.ref ? `<div class="kv"><span>Reference</span><b>${esc(l.ref)}</b></div>` : ''}
+      ${l.from ? `<div class="kv"><span>Recovers order</span><b class="mono">${esc(l.from)}</b></div>` : ''}
+    </div>
+    <div class="actions">
+      ${canApprove ? `<button class="btn btn-primary" data-action="approve">Approve and send</button>` : ''}
+      ${open ? `<button class="btn" data-action="preview">Preview checkout</button>
+        <button class="btn" data-action="remind">Send reminder</button>
+        <button class="btn" data-action="extend">Extend 24 h</button>
+        <button class="btn btn-danger" data-action="cancel">Cancel link</button>` : ''}
+      ${l.status === 'Draft' ? `<button class="btn btn-primary" data-action="send-draft">Send link</button>` : ''}
+      ${['Expired','Cancelled'].includes(l.status) ? `<button class="btn" data-action="duplicate">Send a new link</button>` : ''}
+      ${l.status === 'Paid' ? `<button class="btn" data-action="refund">Refund</button>` : ''}
+    </div>
+    <div><div class="section-title" style="margin-bottom:10px">History</div>
+      <ol class="timeline">${[...l.events].reverse().map(ev => `<li><span>${esc(ev.l)}</span><time>${stamp(ev.t)}</time></li>`).join('')}</ol></div>
+  </div></section></div>`;
+}
+
+function modalCustomer() {
+  const l = link(S.modal.id);
+  const m = S.modal;
+  const first = (l.name || 'the customer').split(' ')[0];
+  let title, body, tag = '';
+  if (m.stage === 'preview') {
+    title = 'Checkout preview';
+    body = `${phoneView(l, false)}<p class="preview-note">This is what ${esc(first)} sees when they open the link. Payments are turned off in preview.</p>`;
+  } else if (m.stage === 'inbox') {
+    tag = '<span class="tag">Demo</span>';
+    title = `${esc(first)}’s phone`;
+    const url = 'https://' + fakeUrl(l.id);
+    const exp = l.expiry >= 48 ? `in ${Math.round(l.expiry / 24)} days` : `in ${l.expiry} hours`;
+    const ch = l.channel || 'Email';
+    if (ch === 'SMS' || ch === 'Copy link') {
+      body = `<div class="phone inbox"><div class="app">${ch === 'SMS' ? 'Messages' : 'Chat'} · ProductTest</div>
+        <div class="bubble"><div class="from">ProductTest</div>Hi ${esc(first)}, here is your secure link to pay ${money(l.amount, l.currency)} to ProductTest: <button class="tap" data-action="tap-link">${url}</button>. It expires ${exp}.</div></div>
+        <p class="preview-note">Tap the link to open the checkout.</p>`;
+    } else if (ch === 'QR code') {
+      body = `<div class="phone inbox"><div class="app">Camera</div>
+        <div style="display:grid;place-items:center"><canvas class="qr" id="qr-cust" width="29" height="29" aria-label="Scanned QR code"></canvas></div>
+        <button class="btn btn-primary" data-action="tap-link" style="justify-content:center">Open ${fakeUrl(l.id)}</button></div>
+        <p class="preview-note">The phone camera recognised the QR code.</p>`;
+    } else {
+      body = `<div class="phone inbox"><div class="app">Mail</div>
+        <div class="mail"><div class="muted" style="font-size:12px">From: ProductTest &lt;payments@producttest.example&gt;</div><div class="subj">Your payment link from ProductTest</div>
+        <div>Hi ${esc(first)},<br>You can pay ${money(l.amount, l.currency)}${l.ref ? ` for ${esc(l.ref)}` : ''} securely using the button below. The link expires ${exp}.</div>
+        <button class="btn btn-primary" data-action="tap-link" style="justify-content:center">Pay ${money(l.amount, l.currency)}</button></div></div>
+        <p class="preview-note">Tap the button to open the checkout.</p>`;
+    }
+  } else {
+    tag = '<span class="tag">Demo</span>';
+    title = `${esc(first)}’s phone · checkout`;
+    if (m.result === 'ok') {
+      body = `<div class="result ok"><div class="big">✓</div><b>Payment successful</b><span class="muted num">${money(l.amount, l.currency)} paid with ${esc(m.method)}</span><span class="muted" style="font-size:12px">You can close this page.</span></div>`;
+    } else if (!['Sent','Opened'].includes(l.status)) {
+      body = `<div class="result no"><div class="big">!</div><b>This link can’t be used</b><span class="muted">It is ${esc(l.status.toLowerCase())}. Please contact ProductTest for a new one.</span></div>`;
+    } else {
+      const card = m.method === 'Card';
+      body = `${m.result === 'no' ? `<div class="notice bad"><b>Payment declined.</b> Try again or choose another method.</div>` : ''}
+        ${phoneView(l, true, m.method)}
+        ${card ? `<div class="form">
+          <div class="fld"><label for="c-num">Card number</label><input type="text" id="c-num" class="mono" value="4111 1111 1111 1111"></div>
+          <div class="row2"><div class="fld"><label for="c-exp">Expiry</label><input type="text" id="c-exp" class="mono" value="12/30"></div>
+          <div class="fld"><label for="c-cvv">CVV</label><input type="text" id="c-cvv" class="mono" value="000"></div></div>
+          <div class="fld"><label for="c-holder">Card holder</label><input type="text" id="c-holder" value="${esc(l.name)}"></div>
+          ${S.testMode ? `<div class="notice info" style="font-size:12px">Test mode: CVV <b class="mono">000</b> approves, <b class="mono">001</b> declines.</div>` : ''}</div>` : ''}
+        ${m.method && !card ? `<div class="notice info" style="font-size:12px">${m.method === 'eWallet' ? 'You’ll confirm the payment in your wallet app.' : 'You’ll approve the payment in your online banking.'}${S.testMode ? ' Test mode approves it straight away.' : ''}</div>` : ''}
+        <button class="btn btn-primary" id="pay-btn" data-action="pay" ${m.method ? '' : 'disabled'} style="justify-content:center">${m.method ? 'Pay ' + money(l.amount, l.currency) : 'Choose how to pay'}</button>`;
+    }
+  }
+  return `<div class="modal-scrim" data-close="modal"><section class="modal" role="dialog" aria-modal="true" aria-label="${title}">
+    <div class="modal-head">${tag}<b>${title}</b><button class="btn btn-sm x" data-close="modal">Close</button></div>
+    <div class="modal-body">${body}</div></section></div>`;
+}
+
+/* ---------- QR (decorative, deterministic) ---------- */
+function drawQR() {
+  const c = $('#qr') || $('#qr-cust'); if (!c) return;
+  const qid = S.modal?.id || S.drawer?.id || 'PL';
+  const g = c.getContext('2d'); const n = 29; let s = 0;
+  for (const ch of qid) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, n, n); g.fillStyle = '#111';
+  const finder = (x, y) => { g.fillRect(x, y, 7, 7); g.fillStyle = '#fff'; g.fillRect(x + 1, y + 1, 5, 5); g.fillStyle = '#111'; g.fillRect(x + 2, y + 2, 3, 3); };
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const inF = (x < 8 && y < 8) || (x > n - 9 && y < 8) || (x < 8 && y > n - 9);
+    if (!inF && rnd() > 0.52) g.fillRect(x, y, 1, 1);
+  }
+  finder(0, 0); finder(n - 7, 0); finder(0, n - 7);
+}
+
+/* ---------- actions ---------- */
+function toast(title, text) {
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = `<b>${esc(title)}</b>${esc(text || '')}`;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), 4200);
+}
+function setRole(r, silent) {
+  S.role = r;
+  if (!silent) { toast('Now viewing as ' + ROLES[r].name, ROLES[r].title); if (r !== 'agent') emit('role:lead'); }
+}
+function openCreate(draft) { S.drawer = {type:'create', draft: draft || blankDraft()}; render(); emit('open:create'); }
+
+function readForm() {
+  const d = S.drawer.draft;
+  const v = id => document.getElementById(id);
+  if (!v('f-amount')) return;
+  d.amount = v('f-amount').value; d.currency = v('f-currency').value; d.name = v('f-name').value.trim();
+  d.email = v('f-email').value.trim(); d.phone = v('f-phone').value.trim(); d.country = v('f-country').value;
+  d.methods = [...document.querySelectorAll('[data-method]')].filter(x => x.checked).map(x => x.dataset.method);
+  d.expiry = Number(v('f-expiry').value); d.single = v('f-use').value === '1';
+  d.ref = v('f-ref').value.trim(); d.desc = v('f-desc').value.trim();
+}
+function rerenderDrawerKeepFocus() {
+  const a = document.activeElement; const id = a && a.id; const pos = a && 'selectionStart' in a ? (() => { try { return a.selectionStart; } catch { return null; } })() : null;
+  renderLayer(); applyGuide();
+  if (id) { const n = document.getElementById(id); if (n) { n.focus(); try { if (pos != null) n.setSelectionRange(pos, pos); } catch {} } }
+}
+
+function createLink() {
+  readForm();
+  const d = S.drawer.draft; d.touched = true;
+  const errs = validate(d);
+  if (Object.keys(errs).length) {
+    rerenderDrawerKeepFocus();
+    if (S.scenario === 'errors') emit('errors:shown');
+    return;
+  }
+  tick(1);
+  const id = 'PL-' + (++seq);
+  const over = Number(d.amount) > me().limit;
+  const l = {id, name:d.name, email:d.email, phone:d.phone, country:d.country, amount:Number(d.amount), currency:d.currency, methods:[...d.methods], expiry:d.expiry, single:d.single, ref:d.ref, desc:d.desc, from:d.from,
+    status: over ? 'Pending approval' : 'Sent', by: me().name, created:new Date(clock), channel:null,
+    events:[{t:new Date(clock), l:`Created by ${me().name}${d.from ? ' from failed order ' + d.from : ''}`}]};
+  S.links.unshift(l);
+  if (d.from) { const o = S.orders.find(o => o.id === d.from); if (o) o.link = id; }
+  log(`Created ${id} · ${money(l.amount, l.currency)}`);
+  if (over) {
+    l.events.push({t:new Date(clock), l:`Approval requested from a team lead (above ${money(me().limit)} limit)`});
+    log(`Requested approval for ${id}`);
+    S.drawer = null; S.view = 'links';
+    toast('Sent for approval', `${id} will go out once a team lead approves it.`);
+    render(); emit('create:continue'); emit('approval:requested'); return;
+  }
+  l.status = 'Draft';
+  S.drawer = {type:'send', id, channel:null};
+  render(); emit('create:continue');
+}
+
+function send() {
+  const l = link(S.drawer.id); const ch = S.drawer.channel; if (!ch) return;
+  tick(1);
+  l.status = 'Sent'; l.channel = ch;
+  l.events.push({t:new Date(clock), l: ch === 'Copy link' ? 'Link copied' : ch === 'QR code' ? 'Shown as QR code' : `Sent by ${ch}`});
+  log(`${ch === 'Copy link' ? 'Copied' : ch === 'QR code' ? 'Showed QR for' : 'Sent'} ${l.id}${['Email','SMS'].includes(ch) ? ' by ' + ch : ''}`);
+  toast(ch === 'Copy link' ? 'Link copied' : ch === 'QR code' ? 'Ready to scan' : 'Link sent', `${l.id} · ${money(l.amount, l.currency)} to ${l.name || l.email}`);
+  S.lastLink = l.id;
+  S.drawer = {type:'detail', id:l.id}; S.view = 'links';
+  render(); emit('sent');
+}
+
+function pay() {
+  const l = link(S.modal.id); const m = S.modal.method;
+  if (m === 'Card') {
+    const cvv = ($('#c-cvv')?.value || '').trim();
+    if (cvv === '001') {
+      tick(1); l.events.push({t:new Date(clock), l:'Card payment declined'}); S.modal.result = 'no';
+      render(); return;
+    }
+  }
+  tick(2);
+  l.status = 'Paid';
+  const oid = 'ORD-' + (88220 + S.orders.length);
+  l.events.push({t:new Date(clock), l:`Paid by ${m} · order ${oid}`});
+  S.orders.unshift({id:oid, name:l.name || l.email, email:l.email, country:l.country, amount:l.amount, currency:l.currency, method:m, status:'Approved', reason:'', time:new Date(clock), link:l.id, recovered: !!l.from});
+  log(`${l.id} paid · ${money(l.amount, l.currency)} by ${m}`, 'System');
+  S.modal.result = 'ok';
+  render();
+  toast(`${l.name || 'Customer'} paid ${money(l.amount, l.currency)}`, `${l.id} · notification sent to ${l.by}`);
+  emit('paid');
+}
+
+function act(action, el) {
+  const d = S.drawer;
+  switch (action) {
+    case 'new-link': openCreate(); break;
+    case 'fill-example': {
+      const sc = SCENARIOS.find(s => s.key === S.scenario); if (!sc?.example) return;
+      S.drawer.draft = Object.assign(blankDraft(), JSON.parse(JSON.stringify(sc.example)), {touched:true});
+      if (S.scenario === 'errors') { render(); emit('errors:shown'); return; }
+      render(); break;
+    }
+    case 'create-continue': createLink(); break;
+    case 'send': send(); break;
+    case 'recover': {
+      const o = S.orders.find(o => o.id === el.dataset.id);
+      const methods = o.method === 'Card' ? ['Card', 'eWallet'] : [o.method, 'Card'];
+      openCreate(Object.assign(blankDraft(), {name:o.name, email:o.email, country:o.country, amount:String(o.amount), currency:o.currency, methods, expiry:48, from:o.id, desc:'Complete your deposit'}));
+      emit('recovery:open'); break;
+    }
+    case 'bulk-recover': {
+      const ids = [...document.querySelectorAll('[data-select]:checked')].map(x => x.dataset.select);
+      if (!ids.length) { toast('Select failed orders first', 'Tick the orders you want to follow up.'); return; }
+      ids.forEach(oid => {
+        const o = S.orders.find(o => o.id === oid); tick(1);
+        const id = 'PL-' + (++seq);
+        S.links.unshift({id, name:o.name, email:o.email, phone:'', country:o.country, amount:o.amount, currency:o.currency, methods: o.method === 'Card' ? ['Card','eWallet'] : [o.method,'Card'], expiry:48, single:true, status:'Sent', by:me().name, created:new Date(clock), channel:'Email', from:o.id,
+          events:[{t:new Date(clock), l:`Created by ${me().name} from failed order ${o.id}`},{t:new Date(clock), l:'Sent by email'}]});
+        o.link = id; log(`Sent recovery link ${id} for ${o.id}`);
+      });
+      toast(`${ids.length} recovery link${ids.length > 1 ? 's' : ''} sent`, 'Each one is prefilled from its failed order.');
+      render(); break;
+    }
+    case 'open-link': S.drawer = {type:'detail', id: el.dataset.id}; render(); break;
+    case 'simulate': {
+      const id = S.lastLink || d?.id; if (!id) return;
+      S.modal = {id, stage:'inbox', method:null, result:null}; render(); emit('customer:open'); break;
+    }
+    case 'tap-link': {
+      const l = link(S.modal.id); tick(3);
+      if (l.status === 'Sent') { l.status = 'Opened'; l.events.push({t:new Date(clock), l:'Opened by customer'}); }
+      S.modal.stage = 'checkout'; render(); break;
+    }
+    case 'preview': S.modal = {id:d.id, stage:'preview'}; render(); break;
+    case 'all-scenarios': S.scenario = null; S.step = 0; S.drawer = null; S.modal = null; render(); break;
+    case 'pay': pay(); break;
+    case 'remind': { const l = link(d.id); tick(60 * 24); l.events.push({t:new Date(clock), l:`Reminder sent by ${l.email ? 'email' : 'SMS'}`}); log(`Sent reminder for ${l.id}`); toast('Reminder sent', `${l.name || l.email} was reminded about ${l.id}.`); render(); emit('reminder'); break; }
+    case 'extend': { const l = link(d.id); l.expiry += 24; tick(1); l.events.push({t:new Date(clock), l:'Expiry extended by 24 hours'}); log(`Extended ${l.id}`); render(); break; }
+    case 'cancel': { const l = link(d.id); tick(1); l.status = 'Cancelled'; l.events.push({t:new Date(clock), l:`Cancelled by ${me().name}`}); log(`Cancelled ${l.id}`); toast('Link cancelled', 'The customer can no longer pay with it.'); render(); break; }
+    case 'duplicate': { const l = link(d.id); openCreate(Object.assign(blankDraft(), {name:l.name, email:l.email, phone:l.phone, country:l.country, amount:String(l.amount), currency:l.currency, methods:[...l.methods], expiry:l.expiry})); break; }
+    case 'send-draft': S.drawer = {type:'send', id:d.id, channel:null}; render(); break;
+    case 'refund': toast('Refund started', 'This uses the existing Refunds flow.'); break;
+    case 'approve': {
+      const l = link(d.id); tick(2);
+      l.status = 'Sent'; l.events.push({t:new Date(clock), l:`Approved by ${me().name}`}, {t:new Date(clock), l:`Sent by ${l.email ? 'email' : 'SMS'}`});
+      S.lastLink = l.id; log(`Approved ${l.id}`); log(`Sent ${l.id} by ${l.email ? 'email' : 'SMS'}`);
+      toast('Approved and sent', `${l.id} went to ${l.name || l.email}.`); render(); emit('approved'); break;
+    }
+    case 'reset': seed(); render(); toast('Demo reset', 'All sample data is back to the start.'); break;
+  }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const nav = t.closest('[data-nav]');
+  if (nav && !nav.disabled) { S.view = nav.dataset.nav; S.drawer = null; S.modal = null; render(); emit('nav:' + S.view); return; }
+  const sc = t.closest('[data-scenario]'); if (sc) { startScenario(sc.dataset.scenario); return; }
+  const f = t.closest('[data-filter]'); if (f) { S.filter = f.dataset.filter; render(); return; }
+  const ch = t.closest('[data-channel]'); if (ch && !ch.disabled) {
+    S.drawer.channel = ch.dataset.channel; renderLayer(); drawQR(); applyGuide();
+    const sc2 = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
+    if (sc2 && sc2.steps[S.step]?.ev === 'sent' && sc2.steps[S.step].sel.includes(ch.dataset.channel)) { $('#send-btn').classList.add('guide-target'); ch.classList.remove('guide-target'); }
+    return;
+  }
+  const p = t.closest('button[data-pay]'); if (p) { S.modal.method = p.dataset.pay; S.modal.result = null; render(); return; }
+  if (t.matches('[data-close]') || (t.closest('button[data-close]'))) {
+    const which = (t.closest('[data-close]')).dataset.close;
+    if (t.closest('.drawer') && !t.closest('button[data-close]')) return;
+    if (t.closest('.modal') && !t.closest('button[data-close]')) return;
+    if (which === 'modal') S.modal = null; else S.drawer = null;
+    render(); return;
+  }
+  const a = t.closest('[data-action]');
+  if (a && !a.disabled) {
+    act(a.dataset.action, a);
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'role-select') { setRole(t.value); render(); return; }
+  if (t.id === 'test-mode') { S.testMode = t.checked; render(); return; }
+  if (S.drawer?.type === 'create' && t.closest('.drawer')) {
+    readForm(); if (S.drawer.draft.email || S.drawer.draft.amount) S.drawer.draft.touched = true;
+    rerenderDrawerKeepFocus(); checkFixed();
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'search') { S.q = t.value; const pos = t.selectionStart; render(); const s = $('#search'); s.focus(); s.setSelectionRange(pos, pos); return; }
+  if (S.drawer?.type === 'create' && t.closest('.drawer') && t.type !== 'checkbox') {
+    readForm(); if (S.drawer.draft.touched) { rerenderDrawerKeepFocus(); checkFixed(); }
+  }
+});
+document.addEventListener('focusout', e => {
+  if (S.drawer?.type === 'create' && e.target.closest?.('.drawer') && ['f-email','f-amount'].includes(e.target.id) && e.target.value) {
+    readForm(); S.drawer.draft.touched = true; setTimeout(() => { if (S.drawer?.type === 'create' && !document.activeElement?.closest?.('.drawer')) rerenderDrawerKeepFocus(); }, 0);
+  }
+});
+function checkFixed() {
+  if (S.scenario !== 'errors') return;
+  const d = S.drawer.draft;
+  if (!Object.keys(validate(d)).length) emit('errors:fixed');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (S.modal) S.modal = null; else if (S.drawer) S.drawer = null; else return; render(); }
+});
+
+seed();
+render();
+})();
+</script>
+</body>
+</html>
