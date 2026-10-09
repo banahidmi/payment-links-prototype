@@ -177,6 +177,9 @@ tbody tr.clickable:hover{background:var(--sunken)}
 .fld input[type=text],.fld input[type=email],.fld input[type=number],.fld select{border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface);width:100%}
 .fld.err input{border-color:var(--bad)}
 .err-msg{font-size:12px;color:var(--bad)}
+.hint{font-size:12px;color:var(--muted)}
+.scn-group{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 -2px}
+.scn-btn.safe .n{border-radius:6px}
 .checks{display:flex;flex-wrap:wrap;gap:8px 16px}
 .checks label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
 .checks label.off{color:var(--muted);text-decoration:line-through}
@@ -313,10 +316,11 @@ const ROLES = {
   lead:  {name:'Omar', title:'Team lead', limit:5000},
   admin: {name:'Dana', title:'Admin', limit:Infinity},
 };
+// Approximate rates so limits (set in USD) apply fairly to every currency.
+const USD_RATE = {USD:1, EUR:1.08, GBP:1.27, THB:0.028};
+const toUSD = (n, c) => n * (USD_RATE[c] || 1);
 const METHODS = ['Card', 'eWallet', 'Online Bank Wire', 'Bank Transfer (P2P)'];
-const COUNTRIES = ['Thailand', 'United Arab Emirates', 'United Kingdom', 'Germany', 'Palestine'];
-// Example risk rule taken from our real test: country PS was blocked for card processing.
-const blockedCard = country => country === 'Palestine';
+const COUNTRIES = ['Thailand', 'United Arab Emirates', 'United Kingdom', 'Germany'];
 
 /* ---------- state ---------- */
 let S;
@@ -328,18 +332,18 @@ function seed() {
     view: 'links', filter: 'All', q: '', role: 'agent', testMode: true,
     scenario: null, step: 0, drawer: null, modal: null,
     links: [
-      {id:'PL-1045', name:'John Carter', email:'john.carter@mail.com', phone:'+44 7700 900123', country:'United Kingdom', amount:100, currency:'USD', methods:['Card','eWallet'], expiry:48, single:true, status:'Paid', by:'Lina', created:t([9,9,12]), channel:'Email',
+      {id:'PL-1045', account:'TR-118204', name:'John Carter', email:'john.carter@mail.com', phone:'+44 7700 900123', country:'United Kingdom', amount:100, currency:'USD', methods:['Card','eWallet'], expiry:48, single:true, status:'Paid', by:'Lina', created:t([9,9,12]), channel:'Email',
         events:[{t:t([9,9,12]),l:'Created by Lina'},{t:t([9,9,13]),l:'Sent by email'},{t:t([9,10,2]),l:'Opened by customer'},{t:t([9,10,4]),l:'Paid by card · order ORD-88190'}]},
-      {id:'PL-1044', name:'Anna Schmidt', email:'anna.schmidt@mail.de', phone:'', country:'Germany', amount:250, currency:'EUR', methods:['Online Bank Wire'], expiry:48, single:true, status:'Opened', by:'Omar', created:t([9,8,40]), channel:'SMS',
+      {id:'PL-1044', account:'TR-120577', name:'Anna Schmidt', email:'anna.schmidt@mail.de', phone:'', country:'Germany', amount:250, currency:'EUR', methods:['Online Bank Wire'], expiry:48, single:true, status:'Opened', by:'Omar', created:t([9,8,40]), channel:'SMS',
         events:[{t:t([9,8,40]),l:'Created by Omar'},{t:t([9,8,41]),l:'Sent by SMS'},{t:t([9,11,15]),l:'Opened by customer'}]},
-      {id:'PL-1043', name:'Li Wei', email:'li.wei@mail.com', phone:'', country:'Thailand', amount:40, currency:'USD', methods:['Card'], expiry:24, single:true, status:'Expired', by:'Lina', created:t([7,16,0]), channel:'Email',
+      {id:'PL-1043', account:'TR-109931', name:'Li Wei', email:'li.wei@mail.com', phone:'', country:'Thailand', amount:40, currency:'USD', methods:['Card'], expiry:24, single:true, status:'Expired', by:'Lina', created:t([7,16,0]), channel:'Email',
         events:[{t:t([7,16,0]),l:'Created by Lina'},{t:t([7,16,1]),l:'Sent by email'},{t:t([8,15,0]),l:'Reminder sent'},{t:t([8,16,0]),l:'Expired unpaid'}]},
     ],
     orders: [
-      {id:'ORD-88213', name:'Sara Haddad', email:'sara.haddad@mail.com', country:'United Arab Emirates', amount:100, currency:'USD', method:'Card', status:'Declined', reason:'Card declined by issuer', time:t([9,13,42]), link:null},
-      {id:'ORD-88207', name:'Mark Evans', email:'mark.evans@mail.co.uk', country:'United Kingdom', amount:75, currency:'GBP', method:'Card', status:'Declined', reason:'Insufficient funds', time:t([9,12,58]), link:null},
-      {id:'ORD-88201', name:'Nina Rossi', email:'nina.rossi@mail.it', country:'Germany', amount:300, currency:'EUR', method:'Online Bank Wire', status:'Failed', reason:'Customer left the bank page', time:t([9,11,20]), link:null},
-      {id:'ORD-88190', name:'John Carter', email:'john.carter@mail.com', country:'United Kingdom', amount:100, currency:'USD', method:'Card', status:'Approved', reason:'', time:t([9,10,4]), link:'PL-1045'},
+      {id:'ORD-88213', account:'TR-204817', name:'Sara Haddad', email:'sara.haddad@mail.com', country:'United Arab Emirates', amount:100, currency:'USD', method:'Card', status:'Declined', reason:'Card declined by issuer', time:t([9,13,42]), link:null},
+      {id:'ORD-88207', account:'TR-198340', name:'Mark Evans', email:'mark.evans@mail.co.uk', country:'United Kingdom', amount:75, currency:'GBP', method:'Card', status:'Declined', reason:'Insufficient funds', time:t([9,12,58]), link:null},
+      {id:'ORD-88201', account:'TR-176002', name:'Nina Rossi', email:'nina.rossi@mail.it', country:'Germany', amount:300, currency:'EUR', method:'Online Bank Wire', status:'Failed', reason:'Customer left the bank page', time:t([9,11,20]), link:null},
+      {id:'ORD-88190', account:'TR-118204', name:'John Carter', email:'john.carter@mail.com', country:'United Kingdom', amount:100, currency:'USD', method:'Card', status:'Approved', reason:'', time:t([9,10,4]), link:'PL-1045'},
     ],
     audit: [
       {t:t([9,10,4]), who:'System', what:'PL-1045 paid · $100.00'},
@@ -354,9 +358,9 @@ const log = (what, who = me().name) => S.audit.unshift({t: new Date(clock), who,
 
 /* ---------- scenarios ---------- */
 const SCENARIOS = [
-  { key:'cs', title:'Customer service bills a customer', sub:'Ahmed can’t deposit on the website', role:'agent',
+  { key:'cs', group:'use', title:'Customer service bills a customer', sub:'Ahmed can’t deposit on the website', role:'agent',
     story:'Ahmed calls support: “I want to deposit $500 but the website isn’t working.” Lina, a support agent, sends him a link while he’s on the phone.',
-    example:{name:'Ahmed Saleh', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:500, currency:'USD', methods:['Card','eWallet'], expiry:24, payWith:'Card'},
+    example:{name:'Ahmed Saleh', account:'TR-215530', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:500, currency:'USD', methods:['Card','eWallet'], expiry:24, payWith:'Card'},
     steps:[
       {t:'Open the Payment Links tab', sel:'[data-nav="links"]', ev:'nav:links'},
       {t:'Click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
@@ -366,7 +370,7 @@ const SCENARIOS = [
       {t:'Pay with the test card (CVV 000)', sel:'#pay-btn', ev:'paid'},
     ],
     done:'Ahmed paid on his phone. Lina got a notification and the link shows Paid.'},
-  { key:'recovery', title:'Recover a failed checkout', sub:'Sara’s card was declined', role:'agent',
+  { key:'recovery', group:'use', title:'Recover a failed checkout', sub:'Sara’s card was declined', role:'agent',
     story:'Sara tried to deposit $100 on the website, but her card was declined and she gave up. The team sends her a recovery link with another way to pay.',
     steps:[
       {t:'Open Orders', sel:'[data-nav="orders"]', ev:'nav:orders'},
@@ -377,9 +381,9 @@ const SCENARIOS = [
       {t:'Pay with eWallet', sel:'#pay-btn', ev:'paid'},
     ],
     done:'The failed $100 deposit was recovered. The new order is linked to the declined one in Orders.'},
-  { key:'invoice', title:'Collect a payment by hand', sub:'A $2,000 invoice with 7 days to pay', role:'admin',
+  { key:'invoice', group:'use', title:'Collect a payment by hand', sub:'A $2,000 invoice with 7 days to pay', role:'admin',
     story:'A business customer owes $2,000. Dana in finance sends a link that works like an invoice and stays valid for 7 days.',
-    example:{name:'Orion Trading LLC', email:'accounts@oriontrading.com', phone:'', country:'United Kingdom', amount:2000, currency:'USD', methods:['Card','Online Bank Wire'], expiry:168, ref:'INV-2026-0412', payWith:'Online Bank Wire'},
+    example:{name:'Orion Trading LLC', account:'CORP-0412', email:'accounts@oriontrading.com', phone:'', country:'United Kingdom', amount:2000, currency:'USD', methods:['Card','Online Bank Wire'], expiry:168, ref:'INV-2026-0412', payWith:'Online Bank Wire'},
     steps:[
       {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
       {t:'Fill the invoice details (7 days), then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
@@ -389,9 +393,9 @@ const SCENARIOS = [
       {t:'Pay by Online Bank Wire', sel:'#pay-btn', ev:'paid'},
     ],
     done:'The invoice was paid after one reminder, and everything is recorded in the link’s history.'},
-  { key:'sales', title:'Sales closes a deal', sub:'A VIP package paid by QR code', role:'lead',
+  { key:'sales', group:'use', title:'Sales closes a deal', sub:'A VIP package paid by QR code', role:'lead',
     story:'Omar agrees a $3,500 VIP package with a customer in a meeting. He shows a QR code, and the customer pays on the spot.',
-    example:{name:'Karim Nassar', email:'karim.nassar@mail.com', phone:'+971 55 765 4321', country:'United Arab Emirates', amount:3500, currency:'USD', methods:['Card','eWallet'], expiry:2, payWith:'Card'},
+    example:{name:'Karim Nassar', account:'TR-090017', email:'karim.nassar@mail.com', phone:'+971 55 765 4321', country:'United Arab Emirates', amount:3500, currency:'USD', methods:['Card','eWallet'], expiry:2, payWith:'Card'},
     steps:[
       {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
       {t:'Fill Karim’s details, then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
@@ -400,9 +404,20 @@ const SCENARIOS = [
       {t:'Pay with the test card', sel:'#pay-btn', ev:'paid'},
     ],
     done:'The deal closed while the customer was still in the meeting.'},
-  { key:'control', title:'The admin stays in control', sub:'Limits, approval and history', role:'agent',
+  { key:'local', group:'use', title:'Pay with a local method', sub:'Somchai in Thailand pays by Thai online banking', role:'agent',
+    story:'Somchai, in Thailand, wants to deposit 15,000 baht, but his card isn\u2019t accepted. Lina sends him a link with Thai online banking, so he pays from his own bank in baht.',
+    example:{name:'Somchai Wongsakul', account:'TR-233871', email:'somchai.w@mail.co.th', phone:'+66 81 234 5678', country:'Thailand', amount:15000, currency:'THB', methods:['Online Bank Wire','Bank Transfer (P2P)'], expiry:24, payWith:'Online Bank Wire'},
+    steps:[
+      {t:'Open Payment Links and click \u201CNew payment link\u201D', sel:'[data-action="new-link"]', ev:'open:create'},
+      {t:'Fill Somchai\u2019s details (baht, online banking), then Continue', sel:'[data-action="fill-example"]', ev:'create:continue'},
+      {t:'Send it by SMS', sel:'[data-channel="SMS"]', ev:'sent'},
+      {t:'Play the customer: open Somchai\u2019s phone and tap the link', sel:'[data-action="simulate"]', ev:'customer:open'},
+      {t:'Choose Online Bank Wire, pick his bank and pay', sel:'#pay-btn', ev:'paid'},
+    ],
+    done:'Somchai paid 15,000 baht from his own Thai bank. No card was needed.'},
+  { key:'control', group:'safe', title:'Approval above a limit', sub:'Agents can\u2019t send large amounts alone', role:'agent',
     story:'Agents can send links, but only up to $1,000. Lina needs to send $1,500, so her team lead has to approve it first.',
-    example:{name:'Ahmed Saleh', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:1500, currency:'USD', methods:['Card'], expiry:24},
+    example:{name:'Ahmed Saleh', account:'TR-215530', email:'ahmed.saleh@mail.com', phone:'+971 50 123 4567', country:'United Arab Emirates', amount:1500, currency:'USD', methods:['Card'], expiry:24},
     steps:[
       {t:'As Lina, open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
       {t:'Fill a $1,500 link and click “Request approval”', sel:'[data-action="fill-example"]', ev:'approval:requested'},
@@ -411,16 +426,16 @@ const SCENARIOS = [
       {t:'Open Administration to see limits and the full history', sel:'[data-nav="admin"]', ev:'nav:admin'},
     ],
     done:'The large link went out only after approval, and every action is in the audit log.'},
-  { key:'errors', title:'Mistakes caught before sending', sub:'What went wrong in our own test', role:'agent',
-    story:'In our test of the internal tool, “gmail,com” was accepted and the country block only showed up at payment. Here both are caught while the agent is still typing.',
-    example:{name:'Bana Hidmi', email:'banahidmi13@gmail,com', phone:'', country:'Palestine', amount:100, currency:'USD', methods:['Card'], expiry:48},
+  { key:'errors', group:'safe', title:'Mistakes caught before sending', sub:'What went wrong in our own test', role:'agent',
+    story:'In our test of the internal tool, “gmail,com” was accepted without any warning. Here it’s caught while the agent is still typing.',
+    example:{name:'Bana Hidmi', account:'TR-100233', email:'banahidmi13@gmail,com', phone:'', country:'United Arab Emirates', amount:100, currency:'USD', methods:['Card'], expiry:48},
     steps:[
       {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
-      {t:'Press “Fill test details” and read the warnings', sel:'[data-action="fill-example"]', ev:'errors:shown'},
-      {t:'Fix the email (gmail.com) and tick eWallet instead of Card', sel:'#f-email', ev:'errors:fixed'},
+      {t:'Press “Fill test details” and read the warning', sel:'[data-action="fill-example"]', ev:'errors:shown'},
+      {t:'Fix the email: change “gmail,com” to “gmail.com”', sel:'#f-email', ev:'errors:fixed'},
       {t:'Continue and send by email', sel:'#create-continue', ev:'sent'},
     ],
-    done:'The agent fixed both problems before the customer ever saw the link.'},
+    done:'The agent fixed the email before the customer ever got a broken link.'},
 ];
 
 function emit(ev) {
@@ -433,7 +448,7 @@ function startScenario(key) {
   const sc = SCENARIOS.find(s => s.key === key);
   S.scenario = key; S.step = 0; S.drawer = null; S.modal = null; S.lastLink = null;
   setRole(sc.role, true);
-  S.view = (key === 'recovery') ? 'dashboard' : (key === 'cs' ? 'dashboard' : 'links');
+  S.view = (key === 'recovery' || key === 'cs') ? 'dashboard' : 'links';
   render();
 }
 
@@ -479,7 +494,7 @@ function viewOrders() {
     return `<tr>
       <td><input type="checkbox" id="sel-${o.id}" aria-label="Select ${o.id}" ${canRecover ? '' : 'disabled'} data-select="${o.id}"></td>
       <td class="mono">${o.id}</td>
-      <td class="cust"><b>${esc(o.name)}</b><span>${esc(o.email)}</span></td>
+      <td class="cust"><b>${esc(o.name)}</b><span>${esc(o.account)} \u00B7 ${esc(o.email)}</span></td>
       <td class="num">${money(o.amount, o.currency)}</td>
       <td>${esc(o.method)}${o.recovered ? ' <span class="muted">· via link</span>' : ''}</td>
       <td>${pill(o.status)}${o.reason ? `<div class="muted" style="font-size:12px">${esc(o.reason)}</div>` : ''}</td>
@@ -503,7 +518,7 @@ function linksTable(list) {
     <thead><tr><th>Link</th><th>Customer</th><th>Amount</th><th>Methods</th><th>Status</th><th>Created by</th><th>Expires</th></tr></thead>
     <tbody>${list.map(l => `<tr class="clickable" data-action="open-link" data-id="${l.id}" ${l.status === 'Pending approval' ? 'data-pending="1"' : ''}>
       <td class="mono">${l.id}</td>
-      <td class="cust"><b>${esc(l.name)}</b><span>${esc(l.email || l.phone)}</span></td>
+      <td class="cust"><b>${esc(l.name)}</b><span>${esc(l.account)} \u00B7 ${esc(l.email || l.phone)}</span></td>
       <td class="num">${money(l.amount, l.currency)}</td>
       <td>${esc(l.methods.join(', '))}</td>
       <td>${pill(l.status)}</td>
@@ -557,23 +572,30 @@ function viewAdmin() {
 }
 
 /* ---------- guide ---------- */
+function scLabel(sc) {
+  const list = SCENARIOS.filter(x => x.group === sc.group);
+  const i = list.indexOf(sc) + 1;
+  return sc.group === 'safe' ? 'S' + i : String(i);
+}
 function renderGuide() {
   const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
   let html;
   if (!sc) {
     html = `<h2>Scenarios to try</h2>
       <p class="muted" style="margin:0;font-size:13px">Pick one. You’ll see its steps, and the next thing to click pulses on the screen.</p>
-      <div class="scn">${SCENARIOS.map((s, i) => `
-      <button class="scn-btn" data-scenario="${s.key}" aria-pressed="false"><span class="n">${i + 1}</span><span><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></span></button>`).join('')}</div>`;
+      <div class="scn"><div class="scn-group">Use cases</div>${SCENARIOS.filter(s => s.group === 'use').map(s => `
+      <button class="scn-btn" data-scenario="${s.key}" aria-pressed="false"><span class="n">${scLabel(s)}</span><span><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></span></button>`).join('')}
+      <div class="scn-group">Safeguards in action</div>${SCENARIOS.filter(s => s.group === 'safe').map(s => `
+      <button class="scn-btn safe" data-scenario="${s.key}" aria-pressed="false"><span class="n">${scLabel(s)}</span><span><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></span></button>`).join('')}</div>`;
   } else {
-    const idx = SCENARIOS.indexOf(sc) + 1;
+    const idx = scLabel(sc);
     const n = sc.steps.length, doneN = Math.min(S.step, n), finished = S.step >= n;
     const cur = sc.steps[S.step];
     const showPlay = cur && ['customer:open', 'paid'].includes(cur.ev) && !S.modal && S.lastLink;
     const who = S.lastLink ? (link(S.lastLink).name || 'the customer').split(' ')[0] : '';
     html = `<button class="btn btn-sm back" data-action="all-scenarios">← All scenarios</button>
       <div class="panel steps">
-        <div class="head"><span class="n">${idx}</span><h3>${esc(sc.title)}</h3></div>
+        <div class="head"><span class="n">${idx}</span><div><div class="scn-group" style="margin:0">${sc.group === 'safe' ? 'Safeguard' : 'Use case'}</div><h3>${esc(sc.title)}</h3></div></div>
         <p class="story" style="margin:0">${esc(sc.story)}</p>
         <div class="progress"><span>${finished ? 'Completed' : `Step ${doneN + 1} of ${n}`}</span><div class="bar"><i style="width:${doneN / n * 100}%"></i></div></div>
         <ol>${sc.steps.map((st, i) => `<li class="${i < S.step ? 'done' : i === S.step ? 'now' : ''}">${esc(st.t)}</li>`).join('')}</ol>
@@ -622,16 +644,16 @@ function renderLayer() {
 }
 
 function blankDraft() {
-  return {name:'', email:'', phone:'', country:'United Arab Emirates', amount:'', currency:'USD', methods:['Card'], expiry:48, single:true, ref:'', desc:'', from:null, touched:false};
+  return {name:'', account:'', email:'', phone:'', country:'United Arab Emirates', amount:'', currency:'USD', methods:['Card'], expiry:48, single:true, ref:'', desc:'', from:null, touched:false};
 }
 function validate(d) {
   const e = {};
   const amt = Number(d.amount);
   if (!d.amount || !(amt > 0)) e.amount = 'Enter an amount above 0.';
+  if (!d.account) e.account = 'Add the customer\u2019s account ID, so the payment is credited to the right account.';
   if (!d.email && !d.phone) e.email = 'Add an email or a phone number so we can send the link.';
   else if (d.email && !EMAIL_RE.test(d.email)) e.email = `Check the email address. “${d.email}” isn’t valid${d.email.includes(',') ? ' (there’s a comma where a dot should be)' : ''}.`;
   if (!d.methods.length) e.methods = 'Choose at least one payment method.';
-  if (d.methods.includes('Card') && blockedCard(d.country)) e.methods = `Card payments aren’t allowed for customers in ${d.country} on your account. Offer eWallet or Online Bank Wire instead, or ask support to enable it.`;
   return e;
 }
 
@@ -640,7 +662,7 @@ function drawerCreate() {
   const e = d.touched ? validate(d) : {};
   const sc = S.scenario && SCENARIOS.find(s => s.key === S.scenario);
   const ex = sc?.example && !d.from;
-  const over = Number(d.amount) > me().limit;
+  const over = toUSD(Number(d.amount), d.currency) > me().limit;
   const allErr = validate(d);
   const ok = d.touched && !Object.keys(allErr).length;
   return `<div class="scrim" data-close="drawer"><section class="drawer" role="dialog" aria-modal="true" aria-label="New payment link">
@@ -655,7 +677,11 @@ function drawerCreate() {
           <div class="fld ${e.amount ? 'err' : ''}"><label for="f-amount">Amount *</label><input type="text" inputmode="decimal" id="f-amount" value="${esc(d.amount)}" placeholder="0.00">${e.amount ? `<span class="err-msg">${e.amount}</span>` : ''}</div>
           <div class="fld"><label for="f-currency">Currency *</label><select id="f-currency">${['USD','EUR','GBP','THB'].map(c => `<option ${c === d.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
         </div>
-        <div class="fld"><label for="f-name">Customer name</label><input type="text" id="f-name" value="${esc(d.name)}" placeholder="e.g. Ahmed Saleh"></div>
+        <div class="row2">
+          <div class="fld"><label for="f-name">Customer name</label><input type="text" id="f-name" value="${esc(d.name)}" placeholder="e.g. Ahmed Saleh"></div>
+          <div class="fld ${e.account ? 'err' : ''}"><label for="f-account">Customer account ID *</label><input type="text" id="f-account" value="${esc(d.account)}" placeholder="e.g. TR-204817"></div>
+        </div>
+        ${e.account ? `<span class="err-msg" style="margin-top:-8px">${esc(e.account)}</span>` : `<span class="hint" style="margin-top:-8px">The payment is credited only to this verified account.</span>`}
         <div class="row2">
           <div class="fld ${e.email ? 'err' : ''}"><label for="f-email">Email *</label><input type="text" inputmode="email" id="f-email" value="${esc(d.email)}" placeholder="name@example.com"></div>
           <div class="fld"><label for="f-phone">or Phone</label><input type="text" id="f-phone" value="${esc(d.phone)}" placeholder="+971 50 000 0000"></div>
@@ -672,7 +698,7 @@ function drawerCreate() {
         <details class="more" ${d.ref || d.desc ? 'open' : ''}><summary>More details (reference, description)</summary>
           <div class="form"><div class="row2"><div class="fld"><label for="f-ref">Your reference</label><input type="text" id="f-ref" value="${esc(d.ref)}" placeholder="e.g. INV-2026-0412"></div>
           <div class="fld"><label for="f-desc">Description</label><input type="text" id="f-desc" value="${esc(d.desc)}" placeholder="Shown to the customer"></div></div></div></details>
-        ${ok ? `<div class="notice ok"><b>Ready to send.</b> ${esc(d.country)}, ${esc(d.currency)} and ${esc(d.methods.join(', '))} are allowed on your account.</div>` : ''}
+        ${ok ? `<div class="notice ok"><b>Ready to send.</b> All required details are filled in.</div>` : ''}
         ${ok && over ? `<div class="notice warn"><b>Needs approval.</b> ${money(Number(d.amount), d.currency)} is above your ${money(me().limit)} limit. A team lead will be asked to approve it.</div>` : ''}
       </div>
       <div><div class="preview-lbl">The customer will see</div>${phoneView(d, false)}</div>
@@ -733,6 +759,7 @@ function drawerDetail() {
     <div class="detail-grid">
       <div class="kv"><span>Amount</span><b class="num">${money(l.amount, l.currency)}</b></div>
       <div class="kv"><span>Customer</span><b>${esc(l.name || '–')}</b><span>${esc([l.email, l.phone].filter(Boolean).join(' · '))}</span></div>
+      <div class="kv"><span>Customer account ID</span><b class="mono">${esc(l.account || '\u2013')}</b></div>
       <div class="kv"><span>Payment methods</span><b>${esc(l.methods.join(', '))}</b></div>
       <div class="kv"><span>Expires</span><b>${expiresText(l)}</b></div>
       <div class="kv"><span>Created by</span><b>${esc(l.by)}</b></div>
@@ -755,6 +782,8 @@ function drawerDetail() {
   </div></section></div>`;
 }
 
+const BANKS = {Thailand:['Bangkok Bank','Kasikornbank','SCB (Siam Commercial Bank)','Krungthai Bank'], other:['Barclays','HSBC','Deutsche Bank','Emirates NBD']};
+const bankSelect = l => `<div class="fld"><label for="c-bank">Your bank</label><select id="c-bank">${(BANKS[l.country] || BANKS.other).map(b => `<option>${b}</option>`).join('')}</select></div>`;
 function modalCustomer() {
   const l = link(S.modal.id);
   const m = S.modal;
@@ -802,6 +831,7 @@ function modalCustomer() {
           <div class="fld"><label for="c-cvv">CVV</label><input type="text" id="c-cvv" class="mono" value="000"></div></div>
           <div class="fld"><label for="c-holder">Card holder</label><input type="text" id="c-holder" value="${esc(l.name)}"></div>
           ${S.testMode ? `<div class="notice info" style="font-size:12px">Test mode: CVV <b class="mono">000</b> approves, <b class="mono">001</b> declines.</div>` : ''}</div>` : ''}
+        ${m.method === 'Online Bank Wire' ? bankSelect(l) : ''}
         ${m.method && !card ? `<div class="notice info" style="font-size:12px">${m.method === 'eWallet' ? 'You’ll confirm the payment in your wallet app.' : 'You’ll approve the payment in your online banking.'}${S.testMode ? ' Test mode approves it straight away.' : ''}</div>` : ''}
         <button class="btn btn-primary" id="pay-btn" data-action="pay" ${m.method ? '' : 'disabled'} style="justify-content:center">${m.method ? 'Pay ' + money(l.amount, l.currency) : 'Choose how to pay'}</button>`;
     }
@@ -843,7 +873,7 @@ function readForm() {
   const d = S.drawer.draft;
   const v = id => document.getElementById(id);
   if (!v('f-amount')) return;
-  d.amount = v('f-amount').value; d.currency = v('f-currency').value; d.name = v('f-name').value.trim();
+  d.amount = v('f-amount').value; d.currency = v('f-currency').value; d.name = v('f-name').value.trim(); d.account = v('f-account').value.trim();
   d.email = v('f-email').value.trim(); d.phone = v('f-phone').value.trim(); d.country = v('f-country').value;
   d.methods = [...document.querySelectorAll('[data-method]')].filter(x => x.checked).map(x => x.dataset.method);
   d.expiry = Number(v('f-expiry').value); d.single = v('f-use').value === '1';
@@ -866,8 +896,8 @@ function createLink() {
   }
   tick(1);
   const id = 'PL-' + (++seq);
-  const over = Number(d.amount) > me().limit;
-  const l = {id, name:d.name, email:d.email, phone:d.phone, country:d.country, amount:Number(d.amount), currency:d.currency, methods:[...d.methods], expiry:d.expiry, single:d.single, ref:d.ref, desc:d.desc, from:d.from,
+  const over = toUSD(Number(d.amount), d.currency) > me().limit;
+  const l = {id, account:d.account, name:d.name, email:d.email, phone:d.phone, country:d.country, amount:Number(d.amount), currency:d.currency, methods:[...d.methods], expiry:d.expiry, single:d.single, ref:d.ref, desc:d.desc, from:d.from,
     status: over ? 'Pending approval' : 'Sent', by: me().name, created:new Date(clock), channel:null,
     events:[{t:new Date(clock), l:`Created by ${me().name}${d.from ? ' from failed order ' + d.from : ''}`}]};
   S.links.unshift(l);
@@ -910,7 +940,7 @@ function pay() {
   l.status = 'Paid';
   const oid = 'ORD-' + (88220 + S.orders.length);
   l.events.push({t:new Date(clock), l:`Paid by ${m} · order ${oid}`});
-  S.orders.unshift({id:oid, name:l.name || l.email, email:l.email, country:l.country, amount:l.amount, currency:l.currency, method:m, status:'Approved', reason:'', time:new Date(clock), link:l.id, recovered: !!l.from});
+  S.orders.unshift({id:oid, account:l.account, name:l.name || l.email, email:l.email, country:l.country, amount:l.amount, currency:l.currency, method:m, status:'Approved', reason:'', time:new Date(clock), link:l.id, recovered: !!l.from});
   log(`${l.id} paid · ${money(l.amount, l.currency)} by ${m}`, 'System');
   S.modal.result = 'ok';
   render();
@@ -933,7 +963,7 @@ function act(action, el) {
     case 'recover': {
       const o = S.orders.find(o => o.id === el.dataset.id);
       const methods = o.method === 'Card' ? ['Card', 'eWallet'] : [o.method, 'Card'];
-      openCreate(Object.assign(blankDraft(), {name:o.name, email:o.email, country:o.country, amount:String(o.amount), currency:o.currency, methods, expiry:48, from:o.id, desc:'Complete your deposit'}));
+      openCreate(Object.assign(blankDraft(), {name:o.name, account:o.account, email:o.email, country:o.country, amount:String(o.amount), currency:o.currency, methods, expiry:48, from:o.id, desc:'Complete your deposit'}));
       emit('recovery:open'); break;
     }
     case 'bulk-recover': {
@@ -942,7 +972,7 @@ function act(action, el) {
       ids.forEach(oid => {
         const o = S.orders.find(o => o.id === oid); tick(1);
         const id = 'PL-' + (++seq);
-        S.links.unshift({id, name:o.name, email:o.email, phone:'', country:o.country, amount:o.amount, currency:o.currency, methods: o.method === 'Card' ? ['Card','eWallet'] : [o.method,'Card'], expiry:48, single:true, status:'Sent', by:me().name, created:new Date(clock), channel:'Email', from:o.id,
+        S.links.unshift({id, account:o.account, name:o.name, email:o.email, phone:'', country:o.country, amount:o.amount, currency:o.currency, methods: o.method === 'Card' ? ['Card','eWallet'] : [o.method,'Card'], expiry:48, single:true, status:'Sent', by:me().name, created:new Date(clock), channel:'Email', from:o.id,
           events:[{t:new Date(clock), l:`Created by ${me().name} from failed order ${o.id}`},{t:new Date(clock), l:'Sent by email'}]});
         o.link = id; log(`Sent recovery link ${id} for ${o.id}`);
       });
@@ -965,7 +995,7 @@ function act(action, el) {
     case 'remind': { const l = link(d.id); tick(60 * 24); l.events.push({t:new Date(clock), l:`Reminder sent by ${l.email ? 'email' : 'SMS'}`}); log(`Sent reminder for ${l.id}`); toast('Reminder sent', `${l.name || l.email} was reminded about ${l.id}.`); render(); emit('reminder'); break; }
     case 'extend': { const l = link(d.id); l.expiry += 24; tick(1); l.events.push({t:new Date(clock), l:'Expiry extended by 24 hours'}); log(`Extended ${l.id}`); render(); break; }
     case 'cancel': { const l = link(d.id); tick(1); l.status = 'Cancelled'; l.events.push({t:new Date(clock), l:`Cancelled by ${me().name}`}); log(`Cancelled ${l.id}`); toast('Link cancelled', 'The customer can no longer pay with it.'); render(); break; }
-    case 'duplicate': { const l = link(d.id); openCreate(Object.assign(blankDraft(), {name:l.name, email:l.email, phone:l.phone, country:l.country, amount:String(l.amount), currency:l.currency, methods:[...l.methods], expiry:l.expiry})); break; }
+    case 'duplicate': { const l = link(d.id); openCreate(Object.assign(blankDraft(), {name:l.name, account:l.account, email:l.email, phone:l.phone, country:l.country, amount:String(l.amount), currency:l.currency, methods:[...l.methods], expiry:l.expiry})); break; }
     case 'send-draft': S.drawer = {type:'send', id:d.id, channel:null}; render(); break;
     case 'refund': toast('Refund started', 'This uses the existing Refunds flow.'); break;
     case 'approve': {
