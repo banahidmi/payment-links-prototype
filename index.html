@@ -427,7 +427,7 @@ const SCENARIOS = [
     ],
     done:'The large link went out only after approval, and every action is in the audit log.'},
   { key:'errors', group:'safe', title:'Mistakes caught before sending', sub:'What went wrong in our own test', role:'agent',
-    story:'In our test of the internal tool, “gmail,com” was accepted without any warning. Here it’s caught while the agent is still typing.',
+    story:'In our test of the internal tool, an email typed as “gmail,com” got no warning. Here it’s caught while the agent is still typing.',
     example:{name:'Bana Hidmi', account:'TR-100233', email:'banahidmi13@gmail,com', phone:'', country:'United Arab Emirates', amount:100, currency:'USD', methods:['Card'], expiry:48},
     steps:[
       {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
