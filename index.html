@@ -405,7 +405,7 @@ const SCENARIOS = [
     ],
     done:'The deal closed while the customer was still in the meeting.'},
   { key:'local', group:'use', title:'Pay with a local method', sub:'Somchai in Thailand pays by Thai online banking', role:'agent',
-    story:'Somchai, in Thailand, wants to deposit 15,000 baht, but his card isn\u2019t accepted. Lina sends him a link with Thai online banking, so he pays from his own bank in baht.',
+    story:'Somchai, in Thailand, wants to deposit 15,000 baht, but his card isn\u2019t accepted. Lina sends him a link with Thai online banking, so he pays from his own bank in baht. (This assumes the merchant has a THB endpoint set up.)',
     example:{name:'Somchai Wongsakul', account:'TR-233871', email:'somchai.w@mail.co.th', phone:'+66 81 234 5678', country:'Thailand', amount:15000, currency:'THB', methods:['Online Bank Wire','Bank Transfer (P2P)'], expiry:24, payWith:'Online Bank Wire'},
     steps:[
       {t:'Open Payment Links and click \u201CNew payment link\u201D', sel:'[data-action="new-link"]', ev:'open:create'},
@@ -427,7 +427,7 @@ const SCENARIOS = [
     ],
     done:'The large link went out only after approval, and every action is in the audit log.'},
   { key:'errors', group:'safe', title:'Mistakes caught before sending', sub:'What went wrong in our own test', role:'agent',
-    story:'In our test of the internal tool, an email typed as “gmail,com” got no warning. Here it’s caught while the agent is still typing.',
+    story:'In our test of the internal tool, an email typed as “gmail,com” was only caught by a generic browser popup when pressing Create Order. Here it’s flagged next to the field, with a clear message, while the agent is still typing.',
     example:{name:'Bana Hidmi', account:'TR-100233', email:'banahidmi13@gmail,com', phone:'', country:'United Arab Emirates', amount:100, currency:'USD', methods:['Card'], expiry:48},
     steps:[
       {t:'Open Payment Links and click “New payment link”', sel:'[data-action="new-link"]', ev:'open:create'},
@@ -675,7 +675,7 @@ function drawerCreate() {
       <div class="form">
         <div class="row2">
           <div class="fld ${e.amount ? 'err' : ''}"><label for="f-amount">Amount *</label><input type="text" inputmode="decimal" id="f-amount" value="${esc(d.amount)}" placeholder="0.00">${e.amount ? `<span class="err-msg">${e.amount}</span>` : ''}</div>
-          <div class="fld"><label for="f-currency">Currency *</label><select id="f-currency">${['USD','EUR','GBP','THB'].map(c => `<option ${c === d.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+          <div class="fld"><label for="f-currency">Currency *</label><select id="f-currency">${['USD','EUR','GBP','THB'].map(c => `<option ${c === d.currency ? 'selected' : ''}>${c}</option>`).join('')}</select><span class="hint">Only currencies with an endpoint on your account</span></div>
         </div>
         <div class="row2">
           <div class="fld"><label for="f-name">Customer name</label><input type="text" id="f-name" value="${esc(d.name)}" placeholder="e.g. Ahmed Saleh"></div>
@@ -777,6 +777,10 @@ function drawerDetail() {
       ${['Expired','Cancelled'].includes(l.status) ? `<button class="btn" data-action="duplicate">Send a new link</button>` : ''}
       ${l.status === 'Paid' ? `<button class="btn" data-action="refund">Refund</button>` : ''}
     </div>
+    ${(() => { const att = S.orders.filter(o => o.link === l.id); return att.length ? `<div><div class="section-title" style="margin-bottom:10px">Payment attempts</div>
+      <div class="table-wrap"><table style="min-width:0"><thead><tr><th>Order</th><th>Method</th><th>Status</th><th>Time</th></tr></thead><tbody>
+      ${att.map(o => `<tr><td class="mono">${o.id}</td><td>${esc(o.method)}</td><td>${pill(o.status)}</td><td class="mono muted">${hhmm(o.time)}</td></tr>`).join('')}
+      </tbody></table></div><p class="hint" style="margin:6px 0 0">Each attempt is a normal deposit order and also appears in Orders.</p></div>` : ''; })()}
     <div><div class="section-title" style="margin-bottom:10px">History</div>
       <ol class="timeline">${[...l.events].reverse().map(ev => `<li><span>${esc(ev.l)}</span><time>${stamp(ev.t)}</time></li>`).join('')}</ol></div>
   </div></section></div>`;
@@ -932,7 +936,12 @@ function pay() {
   if (m === 'Card') {
     const cvv = ($('#c-cvv')?.value || '').trim();
     if (cvv === '001') {
-      tick(1); l.events.push({t:new Date(clock), l:'Card payment declined'}); S.modal.result = 'no';
+      tick(1);
+      const did = 'ORD-' + (88220 + S.orders.length);
+      S.orders.unshift({id:did, account:l.account, name:l.name || l.email, email:l.email, country:l.country, amount:l.amount, currency:l.currency, method:m, status:'Declined', reason:'Card declined (test CVV 001)', time:new Date(clock), link:l.id});
+      l.events.push({t:new Date(clock), l:`Card payment declined \u00B7 order ${did}. The link stays open for another try`});
+      log(`${l.id} attempt declined \u00B7 order ${did}`, 'System');
+      S.modal.result = 'no';
       render(); return;
     }
   }
